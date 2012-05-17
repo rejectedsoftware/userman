@@ -2,6 +2,7 @@ module userdb.controller;
 
 import userdb.db;
 
+import vibe.core.log;
 import vibe.crypto.passwordhash;
 import vibe.http.router;
 import vibe.textfilter.urlencode;
@@ -36,6 +37,19 @@ class UserDBController {
 		return &requestHandler;
 	}
 	
+	HttpServerRequestDelegate ifAuth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
+	{
+		void requestHandler(HttpServerRequest req, HttpServerResponse res)
+		{
+			if( !req.session ) return;
+			auto usr = m_db.getUserByName(req.session["userName"]);
+			callback(req, res, usr);
+		}
+		
+		return &requestHandler;
+	}
+	
+	
 	void register(UrlRouter router, string prefix)
 	{
 		assert(prefix.length > 0);
@@ -56,14 +70,18 @@ class UserDBController {
 	protected void showLogin(HttpServerRequest req, HttpServerResponse res)
 	{
 		string error;
+		auto prdct = "redirect" in req.query;
+		string redirect = prdct ? *prdct : "";
 		res.renderCompat!("userdb.login.dt",
-			string, "error")(Variant(error));
+			string, "error",
+			string, "redirect")(Variant(error), Variant(redirect));
 	}
 	
 	protected void login(HttpServerRequest req, HttpServerResponse res)
 	{
 		auto username = req.form["name"];
 		auto password = req.form["password"];
+		auto prdct = "redirect" in req.form;
 
 		User user;
 		try {
@@ -75,11 +93,13 @@ class UserDBController {
 			auto session = res.startSession();
 			session["userName"] = username;
 			session["userFullName"] = user.fullName;
-			res.redirect(m_prefix);
+			res.redirect(prdct ? *prdct : m_prefix);
 		} catch( Exception e ){
 			string error = e.msg;
+			string redirect = prdct ? *prdct : "";
 			res.renderCompat!("userdb.login.dt",
-				string, "error")(Variant(error));
+				string, "error",
+				string, "redirect")(Variant(error), Variant(redirect));
 		}
 	}
 	

@@ -4,4 +4,6 @@ block title
 	- string title = "UserDB Demo";
 	
 block body
-	p Hello
+	p Hello and Welcome!
+	p
+		a(href="profile") Edit profile

@@ -9,6 +9,8 @@ block body
 
 	form(method="POST", action="login")
 		table.form
+			- if( redirect.length )
+				input(type="hidden", name="redirect", value="#{redirect}")
 			tr
 				td
 					label(for="name") Username:
