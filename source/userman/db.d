@@ -1,4 +1,4 @@
-module userdb.db;
+module userman.db;
 
 import vibe.crypto.passwordhash;
 import vibe.db.mongo.mongo;

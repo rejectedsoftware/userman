@@ -1,6 +1,6 @@
-module userdb.controller;
+module userman.controller;
 
-import userdb.db;
+public import userman.db;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
@@ -73,8 +73,9 @@ class UserDBController {
 		auto prdct = "redirect" in req.query;
 		string redirect = prdct ? *prdct : "";
 		res.renderCompat!("userdb.login.dt",
+			HttpServerRequest, "req",
 			string, "error",
-			string, "redirect")(Variant(error), Variant(redirect));
+			string, "redirect")(Variant(req), Variant(error), Variant(redirect));
 	}
 	
 	protected void login(HttpServerRequest req, HttpServerResponse res)
@@ -98,22 +99,25 @@ class UserDBController {
 			string error = e.msg;
 			string redirect = prdct ? *prdct : "";
 			res.renderCompat!("userdb.login.dt",
+				HttpServerRequest, "req",
 				string, "error",
-				string, "redirect")(Variant(error), Variant(redirect));
+				string, "redirect")(Variant(req), Variant(error), Variant(redirect));
 		}
 	}
 	
 	protected void logout(HttpServerRequest req, HttpServerResponse res)
 	{
 		res.terminateSession();
-		res.renderCompat!"userdb.logout.dt"();
+		res.renderCompat!("userdb.logout.dt",
+			HttpServerRequest, "req")(Variant(req));
 	}
 
 	protected void showRegister(HttpServerRequest req, HttpServerResponse res)
 	{
 		string error;
 		res.renderCompat!("userdb.register.dt",
-			string, "error")(Variant(error));
+			HttpServerRequest, "req",
+			string, "error")(Variant(req), Variant(error));
 	}
 	
 	protected void register(HttpServerRequest req, HttpServerResponse res)
@@ -125,29 +129,37 @@ class UserDBController {
 			auto fullname = req.form["fullName"];
 			auto password = validatePassword(req.form["password"], req.form["passwordConfirmation"]);
 			m_db.registerUser(email, name, fullname, password);
-			res.renderCompat!("userdb.register_activate.dt", string, "error")(Variant(error));
+			res.renderCompat!("userdb.register_activate.dt",
+				HttpServerRequest, "req",
+				string, "error")(Variant(req), Variant(error));
 		} catch( Exception e ){
 			error = e.msg;
 		}
 		res.renderCompat!("userdb.register.dt",
-			string, "error")(Variant(error));
+			HttpServerRequest, "req",
+			string, "error")(Variant(req), Variant(error));
 	}
 	
 	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)
 	{
 		string error;
-		res.renderCompat!("userdb.resend_activation.dt", string, "error")(Variant(error));
+		res.renderCompat!("userdb.resend_activation.dt",
+			HttpServerRequest, "req",
+			string, "error")(Variant(req), Variant(error));
 	}
 
 	protected void resendActivation(HttpServerRequest req, HttpServerResponse res)
 	{
 		try {
 			m_db.resendActivation(req.form["email"]);
-			res.renderCompat!("userdb.resend_activation_done.dt")();
+			res.renderCompat!("userdb.resend_activation_done.dt",
+				HttpServerRequest, "req")(Variant(req));
 		} catch( Exception e ){
 			string error = "Failed to send activation mail. Please try again later.";
 			error ~= e.toString();
-			res.renderCompat!("userdb.resend_activation.dt", string, "error")(Variant(error));
+			res.renderCompat!("userdb.resend_activation.dt",
+				HttpServerRequest, "req",
+				string, "error")(Variant(req), Variant(error));
 		}
 	}
 	
@@ -158,14 +170,17 @@ class UserDBController {
 		m_db.activateUser(email, code);
 		auto user = m_db.getUserByEmail(email);
 		auto session = res.startSession();
-		res.render!("userdb.activate.dt");
+		res.renderCompat!("userdb.activate.dt",
+			HttpServerRequest, "req")(Variant(req));
 	}
 	
 	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
 		string error;
 		res.renderCompat!("userdb.profile.dt",
-			User, "user", string, "error")(Variant(user), Variant(error));
+			HttpServerRequest, "req",
+			User, "user",
+			string, "error")(Variant(req), Variant(user), Variant(error));
 	}
 	
 	protected void changeProfile(HttpServerRequest req, HttpServerResponse res, User user)
@@ -174,7 +189,9 @@ class UserDBController {
 		// ...
 	
 		res.renderCompat!("userdb.profile.dt",
-			User, "user", string, "error")(Variant(user), Variant(error));
+			HttpServerRequest, "req",
+			User, "user",
+			string, "error")(Variant(req), Variant(user), Variant(error));
 	}
 }
 
