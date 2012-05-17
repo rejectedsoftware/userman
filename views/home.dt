@@ -1,0 +1,7 @@
+extends layout
+
+block title
+	- string title = "UserDB Demo";
+	
+block body
+	p Hello
