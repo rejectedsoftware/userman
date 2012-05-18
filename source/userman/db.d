@@ -53,7 +53,8 @@ class UserDB {
 		user.active = false;
 		user.name = name;
 		user.fullName = full_name;
-		user.passwordHash = generateSimplePasswordHash(password);
+		user.auth.method = "password";
+		user.auth.passwordHash = generateSimplePasswordHash(password);
 		user.email = email;
 		user.activationCode = generateActivationCode();
 		addUser(user);
@@ -143,11 +144,20 @@ class User {
 	string name;
 	string fullName;
 	string email;
-	string passwordHash;
 	string[] groups;
 	string activationCode;
+	AuthInfo auth;
+	Bson[string] properties;
 	
 	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
+}
+
+struct AuthInfo {
+	string method = "password";
+	string passwordHash;
+	string token;
+	string secret;
+	string info;
 }
 
 class Group {

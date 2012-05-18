@@ -36,6 +36,10 @@ class UserDBController {
 		
 		return &requestHandler;
 	}
+	HttpServerRequestDelegate auth(HttpServerRequestDelegate callback)
+	{
+		return auth((req, res, user){ callback(req, res); });
+	}
 	
 	HttpServerRequestDelegate ifAuth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
 	{
@@ -48,7 +52,6 @@ class UserDBController {
 		
 		return &requestHandler;
 	}
-	
 	
 	void register(UrlRouter router, string prefix)
 	{
@@ -88,7 +91,7 @@ class UserDBController {
 		try {
 			user = m_db.getUserByName(username);
 			enforce(user.active, "The account is not yet activated.");
-			enforce(testSimplePasswordHash(user.passwordHash, password),
+			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
 				"The password you entered is not correct.");
 			
 			auto session = res.startSession();
