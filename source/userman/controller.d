@@ -137,10 +137,10 @@ class UserDBController {
 				string, "error")(Variant(req), Variant(error));
 		} catch( Exception e ){
 			error = e.msg;
+			res.renderCompat!("userdb.register.dt",
+				HttpServerRequest, "req",
+				string, "error")(Variant(req), Variant(error));
 		}
-		res.renderCompat!("userdb.register.dt",
-			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
 	}
 	
 	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)

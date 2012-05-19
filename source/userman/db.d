@@ -7,6 +7,7 @@ import vibe.mail.smtp;
 import vibe.stream.memory;
 import vibe.templ.diet;
 
+import std.algorithm;
 import std.array;
 import std.exception;
 import std.random;
@@ -141,6 +142,7 @@ class UserDB {
 class User {
 	BsonObjectID _id;
 	bool active;
+	bool banned;
 	string name;
 	string fullName;
 	string email;
