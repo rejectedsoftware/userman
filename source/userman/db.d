@@ -96,7 +96,7 @@ class UserDB {
 		mail.headers["To"] = email;
 		mail.headers["Subject"] = "Account activation";
 		mail.headers["Content-Type"] = "text/html";
-		mail.bodyText = cast(string)msg.getData();
+		mail.bodyText = cast(string)msg.data();
 		
 		sendMail(m_mailSettings, mail);
 	}
