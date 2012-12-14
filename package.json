@@ -2,6 +2,7 @@
 	"name": "userman",
 	"description": "User management DB and frontend with account activation support",
 	"copyright": "Copyright (c) 2012 Sönke Ludwig",
+	"license": "GPL 3",
     "authors": [
 		"Sönke Ludwig"
 	],
