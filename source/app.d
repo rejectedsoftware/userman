@@ -7,17 +7,16 @@
 */
 import vibe.d;
 
-import userman.db;
-import userman.controller;
+import userman.web;
 
 static this()
 {
-	auto db = connectMongoDB("127.0.0.1");
-	auto udb = new UserDB(db, "userdb");
-	auto uctrl = new UserDBController(udb);
+	auto usettings = new UserManSettings;
+	auto uctrl = new UserManController(usettings);
+	auto uweb = new UserManWebInterface(uctrl);
 
 	auto router = new UrlRouter;
-	uctrl.register(router, "/");
+	uweb.register(router);
 	router.get("/", staticTemplate!"home.dt");
 	
 	auto settings = new HttpServerSettings;

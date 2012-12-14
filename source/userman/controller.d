@@ -1,5 +1,5 @@
 /**
-	Web interface implementation
+	Database abstraction layer
 
 	Copyright: © 2012 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
@@ -7,200 +7,174 @@
 */
 module userman.controller;
 
-public import userman.db;
+public import userman.userman;
 
-import vibe.core.log;
 import vibe.crypto.passwordhash;
+import vibe.db.mongo.mongo;
 import vibe.http.router;
-import vibe.textfilter.urlencode;
-import vibe.utils.validation;
+import vibe.mail.smtp;
+import vibe.stream.memory;
+import vibe.templ.diet;
 
+import std.algorithm;
+import std.array;
 import std.exception;
+import std.random;
 
 
-class UserDBController {
+class UserManController {
 	private {
-		UserDB m_db;
-		string m_prefix;
+		MongoCollection m_users;
+		MongoCollection m_groups;
+		UserManSettings m_settings;
 	}
 	
-	this(UserDB db)
+	this(UserManSettings settings)
 	{
-		m_db = db;
+		m_settings = settings;
+
+		auto db = connectMongoDB("127.0.0.1");
+		m_users = db[m_settings.databaseName~".userman.users"];
+		m_groups = db[m_settings.databaseName~".userman.groups"];
 	}
 	
-	HttpServerRequestDelegate auth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
+	void addUser(User usr)
 	{
-		void requestHandler(HttpServerRequest req, HttpServerResponse res)
-		{
-			if( !req.session ){
-				res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
-			} else {
-				auto usr = m_db.getUserByName(req.session["userName"]);
-				callback(req, res, usr);
-			}
-		}
+		enforce(usr.name.length > 3, "User names must be at least 3 characters.");
+		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
+		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
+		usr._id = BsonObjectID.generate();
+		m_users.insert(usr);
+	}
+
+	void registerUser(string email, string name, string full_name, string password)
+	{
+		auto user = new User;
+		user.active = false;
+		user.name = name;
+		user.fullName = full_name;
+		user.auth.method = "password";
+		user.auth.passwordHash = generateSimplePasswordHash(password);
+		user.email = email;
+		user.activationCode = generateActivationCode();
+		addUser(user);
 		
-		return &requestHandler;
+		resendActivation(email);
 	}
-	HttpServerRequestDelegate auth(HttpServerRequestDelegate callback)
+
+	void activateUser(string email, string activation_code)
 	{
-		return auth((req, res, user){ callback(req, res); });
+		auto busr = m_users.findOne(["email": email]);
+		enforce(!busr.isNull(), "There is no user account for the specified email address.");
+		enforce(busr.activationCode.get!string == activation_code, "The activation code provided is not valid.");
+		busr.active = true;
+		busr.activationCode = "";
+		m_users.update(["_id": busr._id], busr);
 	}
 	
-	HttpServerRequestDelegate ifAuth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
+	void resendActivation(string email)
 	{
-		void requestHandler(HttpServerRequest req, HttpServerResponse res)
-		{
-			if( !req.session ) return;
-			auto usr = m_db.getUserByName(req.session["userName"]);
-			callback(req, res, usr);
-		}
+		auto busr = m_users.findOne(["email": email]);
+		enforce(!busr.isNull(), "There is no user account for the specified email address.");
+		enforce(!busr.active, "The user account is already active.");
 		
-		return &requestHandler;
-	}
-	
-	void register(UrlRouter router, string prefix)
-	{
-		assert(prefix.length > 0);
-		assert(m_prefix.length == 0);
-		m_prefix = prefix;
-		router.get(prefix~"login", &showLogin);
-		router.post(prefix~"login", &login);
-		router.get(prefix~"logout", &logout);
-		router.get(prefix~"register", &showRegister);
-		router.post(prefix~"register", &register);
-		router.get(prefix~"resend_activation", &showResendActivation);
-		router.post(prefix~"resend_activation", &resendActivation);
-		router.get(prefix~"activate", &activate);
-		router.get(prefix~"profile", auth(&showProfile));
-		router.post(prefix~"profile", auth(&changeProfile));
-	}
-	
-	protected void showLogin(HttpServerRequest req, HttpServerResponse res)
-	{
-		string error;
-		auto prdct = "redirect" in req.query;
-		string redirect = prdct ? *prdct : "";
-		res.renderCompat!("userdb.login.dt",
-			HttpServerRequest, "req",
-			string, "error",
-			string, "redirect")(Variant(req), Variant(error), Variant(redirect));
-	}
-	
-	protected void login(HttpServerRequest req, HttpServerResponse res)
-	{
-		auto username = req.form["name"];
-		auto password = req.form["password"];
-		auto prdct = "redirect" in req.form;
-
-		User user;
-		try {
-			user = m_db.getUserByName(username);
-			enforce(user.active, "The account is not yet activated.");
-			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
-				"The password you entered is not correct.");
-			
-			auto session = res.startSession();
-			session["userName"] = username;
-			session["userFullName"] = user.fullName;
-			res.redirect(prdct ? *prdct : m_prefix);
-		} catch( Exception e ){
-			string error = e.msg;
-			string redirect = prdct ? *prdct : "";
-			res.renderCompat!("userdb.login.dt",
-				HttpServerRequest, "req",
-				string, "error",
-				string, "redirect")(Variant(req), Variant(error), Variant(redirect));
-		}
-	}
-	
-	protected void logout(HttpServerRequest req, HttpServerResponse res)
-	{
-		res.terminateSession();
-		res.renderCompat!("userdb.logout.dt",
-			HttpServerRequest, "req")(Variant(req));
-	}
-
-	protected void showRegister(HttpServerRequest req, HttpServerResponse res)
-	{
-		string error;
-		res.renderCompat!("userdb.register.dt",
-			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
-	}
-	
-	protected void register(HttpServerRequest req, HttpServerResponse res)
-	{
-		string error;
-		try {
-			auto email = validateEmail(req.form["email"]);
-			auto name = validateUserName(req.form["name"]);
-			auto fullname = req.form["fullName"];
-			auto password = validatePassword(req.form["password"], req.form["passwordConfirmation"]);
-			m_db.registerUser(email, name, fullname, password);
-			res.renderCompat!("userdb.register_activate.dt",
-				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
-		} catch( Exception e ){
-			error = e.msg;
-			res.renderCompat!("userdb.register.dt",
-				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
-		}
-	}
-	
-	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)
-	{
-		string error;
-		res.renderCompat!("userdb.resend_activation.dt",
-			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
-	}
-
-	protected void resendActivation(HttpServerRequest req, HttpServerResponse res)
-	{
-		try {
-			m_db.resendActivation(req.form["email"]);
-			res.renderCompat!("userdb.resend_activation_done.dt",
-				HttpServerRequest, "req")(Variant(req));
-		} catch( Exception e ){
-			string error = "Failed to send activation mail. Please try again later.";
-			error ~= e.toString();
-			res.renderCompat!("userdb.resend_activation.dt",
-				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
-		}
-	}
-	
-	protected void activate(HttpServerRequest req, HttpServerResponse res)
-	{
-		auto email = req.query["email"];
-		auto code = req.query["code"];
-		m_db.activateUser(email, code);
-		auto user = m_db.getUserByEmail(email);
-		auto session = res.startSession();
-		res.renderCompat!("userdb.activate.dt",
-			HttpServerRequest, "req")(Variant(req));
-	}
-	
-	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
-	{
-		string error;
-		res.renderCompat!("userdb.profile.dt",
-			HttpServerRequest, "req",
+		auto user = new User;
+		deserializeBson(user, busr);
+		
+		auto msg = new MemoryOutputStream;
+		parseDietFileCompat!("userdb.activation_mail.dt",
 			User, "user",
-			string, "error")(Variant(req), Variant(user), Variant(error));
+			string, "serviceName",
+			string, "serviceUrl")(msg,
+				Variant(user),
+				Variant(m_settings.serviceName),
+				Variant(m_settings.serviceUrl));
+
+		auto mail = new Mail;
+		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
+		mail.headers["To"] = email;
+		mail.headers["Subject"] = "Account activation";
+		mail.headers["Content-Type"] = "text/html";
+		mail.bodyText = cast(string)msg.data();
+		
+		sendMail(m_settings.mailSettings, mail);
 	}
-	
-	protected void changeProfile(HttpServerRequest req, HttpServerResponse res, User user)
+
+	User getUser(BsonObjectID id)
 	{
-		string error;
-		// ...
-	
-		res.renderCompat!("userdb.profile.dt",
-			HttpServerRequest, "req",
-			User, "user",
-			string, "error")(Variant(req), Variant(user), Variant(error));
+		auto busr = m_users.findOne(["_id": id]);
+		enforce(!busr.isNull(), "The specified user id is invalid.");
+		auto ret = new User;
+		deserializeBson(ret, busr);
+		return ret;
 	}
+
+	User getUserByName(string name)
+	{
+		auto busr = m_users.findOne(["name": name]);
+		enforce(!busr.isNull(), "The specified user name is not registered.");
+		auto ret = new User;
+		deserializeBson(ret, busr);
+		return ret;
+	}
+
+	User getUserByEmail(string email)
+	{
+		auto busr = m_users.findOne(["email": email]);
+		enforce(!busr.isNull(), "The specified email address is not registered.");
+		auto ret = new User;
+		deserializeBson(ret, busr);
+		return ret;
+	}
+	
+	void addGroup(string name, string description)
+	{
+		enforce(m_groups.findOne(["name": name]).isNull(), "A group with this name already exists.");
+		auto grp = new Group;
+		grp._id = BsonObjectID.generate();
+		grp.name = name;
+		grp.description = description;
+		m_groups.insert(grp);
+	}
+}
+
+class User {
+	BsonObjectID _id;
+	bool active;
+	bool banned;
+	string name;
+	string fullName;
+	string email;
+	string[] groups;
+	string activationCode;
+	AuthInfo auth;
+	Bson[string] properties;
+	
+	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
+}
+
+struct AuthInfo {
+	string method = "password";
+	string passwordHash;
+	string token;
+	string secret;
+	string info;
+}
+
+class Group {
+	BsonObjectID _id;
+	string name;
+	string description;
+}
+
+string generateActivationCode()
+{
+	auto ret = appender!string();
+	foreach( i; 0 .. 10 ){
+		auto n = cast(char)uniform(0, 62);
+		if( n < 26 ) ret.put(cast(char)('a'+n));
+		else if( n < 52 ) ret.put(cast(char)('A'+n-26));
+		else ret.put(cast(char)('0'+n-52));
+	}
+	return ret.data();
 }
