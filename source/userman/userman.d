@@ -10,9 +10,16 @@ module userman.userman;
 public import vibe.mail.smtp;
 
 class UserManSettings {
+	bool requireAccountValidation = true;
+	bool useUserNames = true; // use a user name or the email address for identification?
 	string databaseName = "test";
 	string serviceName = "User database test";
 	string serviceUrl = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
 	SmtpClientSettings mailSettings;
+
+	this()
+	{
+		mailSettings = new SmtpClientSettings;
+	}
 }

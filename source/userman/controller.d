@@ -36,7 +36,12 @@ class UserManController {
 		auto db = connectMongoDB("127.0.0.1");
 		m_users = db[m_settings.databaseName~".userman.users"];
 		m_groups = db[m_settings.databaseName~".userman.groups"];
+
+		m_users.ensureIndex(["name": 1], IndexFlags.Unique);
+		m_users.ensureIndex(["email": 1], IndexFlags.Unique);
 	}
+
+	@property UserManSettings settings() { return m_settings; }
 	
 	void addUser(User usr)
 	{
@@ -49,17 +54,20 @@ class UserManController {
 
 	void registerUser(string email, string name, string full_name, string password)
 	{
+		auto need_activation = m_settings.requireAccountValidation;
 		auto user = new User;
-		user.active = false;
+		user.active = !need_activation;
 		user.name = name;
 		user.fullName = full_name;
 		user.auth.method = "password";
 		user.auth.passwordHash = generateSimplePasswordHash(password);
 		user.email = email;
-		user.activationCode = generateActivationCode();
+		if( need_activation )
+			user.activationCode = generateActivationCode();
 		addUser(user);
 		
-		resendActivation(email);
+		if( need_activation )
+			resendActivation(email);
 	}
 
 	void activateUser(string email, string activation_code)

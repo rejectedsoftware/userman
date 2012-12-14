@@ -83,7 +83,8 @@ class UserManWebInterface {
 		res.renderCompat!("userdb.login.dt",
 			HttpServerRequest, "req",
 			string, "error",
-			string, "redirect")(Variant(req), Variant(error), Variant(redirect));
+			string, "redirect",
+			UserManSettings, "settings")(req, error, redirect, m_controller.settings);
 	}
 	
 	protected void login(HttpServerRequest req, HttpServerResponse res)
@@ -109,7 +110,8 @@ class UserManWebInterface {
 			res.renderCompat!("userdb.login.dt",
 				HttpServerRequest, "req",
 				string, "error",
-				string, "redirect")(Variant(req), Variant(error), Variant(redirect));
+				string, "redirect",
+				UserManSettings, "settings")(req, error, redirect, m_controller.settings);
 		}
 	}
 	
@@ -125,7 +127,8 @@ class UserManWebInterface {
 		string error;
 		res.renderCompat!("userdb.register.dt",
 			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
+			string, "error",
+			UserManSettings, "settings")(req, error, m_controller.settings);
 	}
 	
 	protected void register(HttpServerRequest req, HttpServerResponse res)
@@ -133,18 +136,25 @@ class UserManWebInterface {
 		string error;
 		try {
 			auto email = validateEmail(req.form["email"]);
+			if( !m_controller.settings.useUserNames ) req.form["name"] = email;
 			auto name = validateUserName(req.form["name"]);
 			auto fullname = req.form["fullName"];
 			auto password = validatePassword(req.form["password"], req.form["passwordConfirmation"]);
 			m_controller.registerUser(email, name, fullname, password);
-			res.renderCompat!("userdb.register_activate.dt",
-				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
+
+			if( m_controller.settings.requireAccountValidation ){
+				res.renderCompat!("userdb.register_activate.dt",
+					HttpServerRequest, "req",
+					string, "error")(Variant(req), Variant(error));
+			} else {
+				login(req, res);
+			}
 		} catch( Exception e ){
 			error = e.msg;
 			res.renderCompat!("userdb.register.dt",
 				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
+				string, "error",
+				UserManSettings, "settings")(req, error, m_controller.settings);
 		}
 	}
 	

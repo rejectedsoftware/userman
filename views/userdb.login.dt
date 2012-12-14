@@ -16,14 +16,17 @@ block body
 					input(type="hidden", name="redirect", value="#{redirect}")
 				tr
 					td
-						label(for="name") Username:
+						- if( settings.useUserNames )
+							label(for="login-name") Username:
+						- else
+							label(for="login-name") Email:
 					td
-						input(type="text", name="name")
+						input#login-name(type="text", name="name")
 				tr
 					td
-						label(for="password") Password:
+						label(for="login-password") Password:
 					td
-						input(type="password", name="password")
+						input#login-password(type="password", name="password")
 				tr
 					td(colspan="2")
 						input(type="submit", value="Login")
