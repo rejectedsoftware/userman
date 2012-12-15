@@ -42,6 +42,11 @@ class UserManController {
 	}
 
 	@property UserManSettings settings() { return m_settings; }
+
+	bool isEmailRegistered(string email)
+	{
+		return !m_users.findOne(["email": email]).isNull();
+	}
 	
 	void addUser(User usr)
 	{
