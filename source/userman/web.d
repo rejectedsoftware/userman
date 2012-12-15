@@ -101,6 +101,7 @@ class UserManWebInterface {
 				"The password you entered is not correct.");
 			
 			auto session = res.startSession();
+			session["userEmail"] = user.email;
 			session["userName"] = username;
 			session["userFullName"] = user.fullName;
 			res.redirect(prdct ? *prdct : m_prefix);
@@ -117,7 +118,11 @@ class UserManWebInterface {
 	
 	protected void logout(HttpServerRequest req, HttpServerResponse res)
 	{
-		res.terminateSession();
+		if( req.session ){
+			res.terminateSession();
+			req.session = null;
+		}
+		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl;
 		res.renderCompat!("userdb.logout.dt",
 			HttpServerRequest, "req")(Variant(req));
 	}
