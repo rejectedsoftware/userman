@@ -139,6 +139,29 @@ class UserManController {
 		deserializeBson(ret, busr);
 		return ret;
 	}
+
+	void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	{
+		foreach( busr; m_users.find(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count) ){
+			auto usr = deserializeBson!User(busr);
+			del(usr);
+		}
+	}
+
+	long getUserCount()
+	{
+		return m_users.count(Bson.EmptyObject);
+	}
+
+	void deleteUser(BsonObjectID user_id)
+	{
+		m_users.remove(["_id": user_id]);
+	}
+
+	void updateUser(User user)
+	{
+		m_users.update(["_id": user._id], user);
+	}
 	
 	void addGroup(string name, string description)
 	{
