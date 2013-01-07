@@ -95,7 +95,7 @@ class UserManController {
 		deserializeBson(user, busr);
 		
 		auto msg = new MemoryOutputStream;
-		parseDietFileCompat!("userdb.activation_mail.dt",
+		parseDietFileCompat!("userman.activation_mail.dt",
 			User, "user",
 			string, "serviceName",
 			string, "serviceUrl")(msg,

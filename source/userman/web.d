@@ -80,7 +80,7 @@ class UserManWebInterface {
 		string error;
 		auto prdct = "redirect" in req.query;
 		string redirect = prdct ? *prdct : "";
-		res.renderCompat!("userdb.login.dt",
+		res.renderCompat!("userman.login.dt",
 			HttpServerRequest, "req",
 			string, "error",
 			string, "redirect",
@@ -108,7 +108,7 @@ class UserManWebInterface {
 		} catch( Exception e ){
 			string error = e.msg;
 			string redirect = prdct ? *prdct : "";
-			res.renderCompat!("userdb.login.dt",
+			res.renderCompat!("userman.login.dt",
 				HttpServerRequest, "req",
 				string, "error",
 				string, "redirect",
@@ -123,14 +123,14 @@ class UserManWebInterface {
 			req.session = null;
 		}
 		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl;
-		res.renderCompat!("userdb.logout.dt",
+		res.renderCompat!("userman.logout.dt",
 			HttpServerRequest, "req")(Variant(req));
 	}
 
 	protected void showRegister(HttpServerRequest req, HttpServerResponse res)
 	{
 		string error;
-		res.renderCompat!("userdb.register.dt",
+		res.renderCompat!("userman.register.dt",
 			HttpServerRequest, "req",
 			string, "error",
 			UserManSettings, "settings")(req, error, m_controller.settings);
@@ -148,7 +148,7 @@ class UserManWebInterface {
 			m_controller.registerUser(email, name, fullname, password);
 
 			if( m_controller.settings.requireAccountValidation ){
-				res.renderCompat!("userdb.register_activate.dt",
+				res.renderCompat!("userman.register_activate.dt",
 					HttpServerRequest, "req",
 					string, "error")(Variant(req), Variant(error));
 			} else {
@@ -156,7 +156,7 @@ class UserManWebInterface {
 			}
 		} catch( Exception e ){
 			error = e.msg;
-			res.renderCompat!("userdb.register.dt",
+			res.renderCompat!("userman.register.dt",
 				HttpServerRequest, "req",
 				string, "error",
 				UserManSettings, "settings")(req, error, m_controller.settings);
@@ -166,7 +166,7 @@ class UserManWebInterface {
 	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)
 	{
 		string error;
-		res.renderCompat!("userdb.resend_activation.dt",
+		res.renderCompat!("userman.resend_activation.dt",
 			HttpServerRequest, "req",
 			string, "error")(Variant(req), Variant(error));
 	}
@@ -175,12 +175,12 @@ class UserManWebInterface {
 	{
 		try {
 			m_controller.resendActivation(req.form["email"]);
-			res.renderCompat!("userdb.resend_activation_done.dt",
+			res.renderCompat!("userman.resend_activation_done.dt",
 				HttpServerRequest, "req")(Variant(req));
 		} catch( Exception e ){
 			string error = "Failed to send activation mail. Please try again later.";
 			error ~= e.toString();
-			res.renderCompat!("userdb.resend_activation.dt",
+			res.renderCompat!("userman.resend_activation.dt",
 				HttpServerRequest, "req",
 				string, "error")(Variant(req), Variant(error));
 		}
@@ -193,14 +193,14 @@ class UserManWebInterface {
 		m_controller.activateUser(email, code);
 		auto user = m_controller.getUserByEmail(email);
 		auto session = res.startSession();
-		res.renderCompat!("userdb.activate.dt",
+		res.renderCompat!("userman.activate.dt",
 			HttpServerRequest, "req")(Variant(req));
 	}
 	
 	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
 		string error;
-		res.renderCompat!("userdb.profile.dt",
+		res.renderCompat!("userman.profile.dt",
 			HttpServerRequest, "req",
 			User, "user",
 			string, "error")(Variant(req), Variant(user), Variant(error));
@@ -211,7 +211,7 @@ class UserManWebInterface {
 		string error;
 		// ...
 	
-		res.renderCompat!("userdb.profile.dt",
+		res.renderCompat!("userman.profile.dt",
 			HttpServerRequest, "req",
 			User, "user",
 			string, "error")(Variant(req), Variant(user), Variant(error));
