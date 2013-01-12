@@ -11,6 +11,6 @@ block body
 	form(method="POST", action="resend_activation")
 		p
 			label(for="email") Email: 
-			input(type="text", name="email")
+			input(type="email", name="email")
 		p
 			input(type="submit", value="Request activation mail")

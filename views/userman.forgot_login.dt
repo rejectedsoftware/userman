@@ -12,5 +12,5 @@ block body
 				td
 					label(for="email") Email:
 				td
-					input(type="text", name="email")
+					input(type="email", name="email")
 		input(type="submit", value="Request password reset");
