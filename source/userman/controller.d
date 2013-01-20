@@ -57,10 +57,14 @@ class UserManController {
 		m_users.insert(usr);
 	}
 
-	void registerUser(string email, string name, string full_name, string password)
+	BsonObjectID registerUser(string email, string name, string full_name, string password)
 	{
+		validateEmail(email);
+		validatePassword(password, password);
+
 		auto need_activation = m_settings.requireAccountValidation;
 		auto user = new User;
+		user._id = BsonObjectID.generate();
 		user.active = !need_activation;
 		user.name = name;
 		user.fullName = full_name;
@@ -73,6 +77,8 @@ class UserManController {
 		
 		if( need_activation )
 			resendActivation(email);
+
+		return user._id;
 	}
 
 	void activateUser(string email, string activation_code)
