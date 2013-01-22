@@ -15,6 +15,7 @@ import vibe.http.router;
 import vibe.mail.smtp;
 import vibe.stream.memory;
 import vibe.templ.diet;
+import vibe.utils.validation;
 
 import std.algorithm;
 import std.array;
