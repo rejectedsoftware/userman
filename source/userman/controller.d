@@ -21,6 +21,7 @@ import std.algorithm;
 import std.array;
 import std.exception;
 import std.random;
+import std.string;
 
 
 class UserManController {
@@ -31,7 +32,7 @@ class UserManController {
 	}
 	
 	this(UserManSettings settings)
-	{
+	{	
 		m_settings = settings;
 
 		auto db = connectMongoDB("127.0.0.1");
@@ -46,7 +47,8 @@ class UserManController {
 
 	bool isEmailRegistered(string email)
 	{
-		return !m_users.findOne(["email": email]).isNull();
+		auto bu = m_users.findOne(["email": email], ["auth": true]);
+		return !bu.isNull() && bu.auth.method.get!string.length > 0;
 	}
 	
 	void addUser(User usr)
@@ -60,6 +62,9 @@ class UserManController {
 
 	BsonObjectID registerUser(string email, string name, string full_name, string password)
 	{
+		email = email.toLower();
+		name = name.toLower();
+
 		validateEmail(email);
 		validatePassword(password, password);
 
@@ -82,8 +87,48 @@ class UserManController {
 		return user._id;
 	}
 
+	BsonObjectID inviteUser(string email, string full_name, string message)
+	{
+		email = email.toLower();
+
+		validateEmail(email);
+
+		enforce(!isEmailRegistered(email));
+
+		auto user = new User;
+		user._id = BsonObjectID.generate();
+		user.email = email;
+		user.name = email;
+		user.fullName = full_name;
+		addUser(user);
+
+		if( m_settings.mailSettings ){
+			auto msg = new MemoryOutputStream;
+			parseDietFileCompat!("userman.mail.invitation.dt",
+				User, "user",
+				string, "serviceName",
+				string, "serviceUrl")(msg,
+					Variant(user),
+					Variant(m_settings.serviceName),
+					Variant(m_settings.serviceUrl));
+
+			auto mail = new Mail;
+			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
+			mail.headers["To"] = email;
+			mail.headers["Subject"] = "Invitation";
+			mail.headers["Content-Type"] = "text/html";
+			mail.bodyText = cast(string)msg.data();
+			
+			sendMail(m_settings.mailSettings, mail);
+		}
+
+		return user._id;
+	}
+
 	void activateUser(string email, string activation_code)
 	{
+		email = email.toLower();
+
 		auto busr = m_users.findOne(["email": email]);
 		enforce(!busr.isNull(), "There is no user account for the specified email address.");
 		enforce(busr.activationCode.get!string == activation_code, "The activation code provided is not valid.");
@@ -94,6 +139,8 @@ class UserManController {
 	
 	void resendActivation(string email)
 	{
+		email = email.toLower();
+
 		auto busr = m_users.findOne(["email": email]);
 		enforce(!busr.isNull(), "There is no user account for the specified email address.");
 		enforce(!busr.active, "The user account is already active.");
@@ -102,7 +149,7 @@ class UserManController {
 		deserializeBson(user, busr);
 		
 		auto msg = new MemoryOutputStream;
-		parseDietFileCompat!("userman.activation_mail.dt",
+		parseDietFileCompat!("userman.mail.activation.dt",
 			User, "user",
 			string, "serviceName",
 			string, "serviceUrl")(msg,
@@ -131,6 +178,8 @@ class UserManController {
 
 	User getUserByName(string name)
 	{
+		name = name.toLower();
+
 		auto busr = m_users.findOne(["name": name]);
 		enforce(!busr.isNull(), "The specified user name is not registered.");
 		auto ret = new User;
@@ -140,6 +189,8 @@ class UserManController {
 
 	User getUserByEmail(string email)
 	{
+		email = email.toLower();
+
 		auto busr = m_users.findOne(["email": email]);
 		enforce(!busr.isNull(), "The specified email address is not registered.");
 		auto ret = new User;
