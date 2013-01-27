@@ -35,9 +35,9 @@ class UserManController {
 	{	
 		m_settings = settings;
 
-		auto db = connectMongoDB("127.0.0.1");
-		m_users = db[m_settings.databaseName~".userman.users"];
-		m_groups = db[m_settings.databaseName~".userman.groups"];
+		auto db = connectMongoDB("127.0.0.1").getDatabase(m_settings.databaseName);
+		m_users = db["userman.users"];
+		m_groups = db["userman.groups"];
 
 		m_users.ensureIndex(["name": 1], IndexFlags.Unique);
 		m_users.ensureIndex(["email": 1], IndexFlags.Unique);
@@ -93,7 +93,8 @@ class UserManController {
 
 		validateEmail(email);
 
-		enforce(!isEmailRegistered(email));
+		auto existing = m_users.findOne(["email": email], ["_id": true]);
+		if( !existing.isNull() ) return existing._id.get!BsonObjectID;
 
 		auto user = new User;
 		user._id = BsonObjectID.generate();
