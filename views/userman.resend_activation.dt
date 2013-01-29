@@ -13,4 +13,4 @@ block userman.message
 			label(for="email") Email: 
 			input(type="email", name="email")
 		p
-			input(type="submit", value="Request activation mail")
+			button(type="submit") Request activation mail

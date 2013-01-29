@@ -29,7 +29,7 @@ block userman.content
 						input#login-password(type="password", name="password")
 				tr
 					td(colspan="2")
-						input(type="submit", value="Login")
+						button(type="submit") Login
 	
 	p Cannot log in? 
 	

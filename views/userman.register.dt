@@ -35,4 +35,4 @@ block userman.content
 					label(for="passwordConfirmation") Password confirmation:
 				td
 					input(type="password", name="passwordConfirmation")
-		input(type="submit", value="Register account")
+		button(type="submit") Register account

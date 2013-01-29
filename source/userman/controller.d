@@ -19,6 +19,7 @@ import vibe.utils.validation;
 
 import std.algorithm;
 import std.array;
+import std.datetime;
 import std.exception;
 import std.random;
 import std.string;
@@ -174,6 +175,44 @@ class UserManController {
 		sendMail(m_settings.mailSettings, mail);
 	}
 
+	void requestPasswordReset(string email)
+	{
+		auto usr = getUserByEmail(email);
+
+		string reset_code = generateActivationCode();
+		BsonDate expire_time = BsonDate(Clock.currTime() + dur!"hours"(24));
+		m_users.update(["_id": usr._id], ["$set": ["resetCode": Bson(reset_code), "resetCodeExpireTime": Bson(expire_time)]]);
+
+		if( m_settings.mailSettings ){
+			auto msg = new MemoryOutputStream;
+			parseDietFileCompat!("userman.mail.reset_password.dt",
+				User*, "user",
+				string, "reset_code",
+				UserManSettings, "settings")
+				(msg, &usr, reset_code, m_settings);
+
+			auto mail = new Mail;
+			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
+			mail.headers["To"] = email;
+			mail.headers["Subject"] = "Account recovery";
+			mail.headers["Content-Type"] = "text/html; charset=UTF-8";
+			mail.bodyText = cast(string)msg.data();
+			sendMail(m_settings.mailSettings, mail);
+		}
+	}
+
+	void resetPassword(string email, string reset_code, string new_password)
+	{
+		validatePassword(new_password, new_password);
+		auto usr = getUserByEmail(email);
+		enforce(usr.resetCode.length > 0, "No password reset request was made.");
+		enforce(Clock.currTime() < usr.resetCodeExpireTime.toSysTime(), "Reset code is expired, please request a new one.");
+		m_users.update(["_id": usr._id], ["$set": ["resetCode": ""]]);
+		auto code = usr.resetCode;
+		enforce(reset_code == code, "Invalid request code, please request a new one.");
+		m_users.update(["_id": usr._id], ["$set": ["auth.passwordHash": generateSimplePasswordHash(new_password)]]);
+	}
+
 	User getUser(BsonObjectID id)
 	{
 		auto busr = m_users.findOne(["_id": id]);
@@ -251,6 +290,8 @@ class User {
 	string email;
 	string[] groups;
 	string activationCode;
+	string resetCode;
+	BsonDate resetCodeExpireTime;
 	AuthInfo auth;
 	Bson[string] properties;
 	

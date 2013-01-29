@@ -40,6 +40,10 @@ class UserManWebInterface {
 		router.get(m_prefix~"resend_activation", &showResendActivation);
 		router.post(m_prefix~"resend_activation", &resendActivation);
 		router.get(m_prefix~"activate", &activate);
+		router.get(m_prefix~"forgot_login", &showForgotPassword);
+		router.post(m_prefix~"forgot_login", &sendPasswordReset);
+		router.get(m_prefix~"reset_password", &showResetPassword);
+		router.post(m_prefix~"reset_password", &resetPassword);
 		router.get(m_prefix~"profile", auth(&showProfile));
 		router.post(m_prefix~"profile", auth(&changeProfile));
 	}
@@ -130,6 +134,7 @@ class UserManWebInterface {
 			session["userFullName"] = user.fullName;
 			res.redirect(prdct ? *prdct : m_prefix);
 		} catch( Exception e ){
+			logDebug("Error logging in: %s", e.toString());
 			string error = e.msg;
 			string redirect = prdct ? *prdct : "";
 			res.renderCompat!("userman.login.dt",
@@ -189,7 +194,7 @@ class UserManWebInterface {
 	
 	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)
 	{
-		string error;
+		string error = req.params.get("error", null);
 		res.renderCompat!("userman.resend_activation.dt",
 			HttpServerRequest, "req",
 			string, "error")(Variant(req), Variant(error));
@@ -209,7 +214,7 @@ class UserManWebInterface {
 				string, "error")(Variant(req), Variant(error));
 		}
 	}
-	
+
 	protected void activate(HttpServerRequest req, HttpServerResponse res)
 	{
 		auto email = req.query["email"];
@@ -221,6 +226,53 @@ class UserManWebInterface {
 			HttpServerRequest, "req")(Variant(req));
 	}
 	
+	protected void showForgotPassword(HttpServerRequest req, HttpServerResponse res)
+	{
+		string error = req.params.get("error", null);
+		res.renderCompat!("userman.forgot_login.dt",
+			HttpServerRequest, "req",
+			string, "error")(Variant(req), Variant(error));
+	}
+
+	protected void sendPasswordReset(HttpServerRequest req, HttpServerResponse res)
+	{
+		try {
+			m_controller.requestPasswordReset(req.form["email"]);
+		} catch(Exception e){
+			req.params["error"] = e.msg;
+			showForgotPassword(req, res);
+			return;
+		}
+
+		res.renderCompat!("userman.forgot_login_sent.dt",
+			HttpServerRequest, "req")(req);
+	}
+
+	protected void showResetPassword(HttpServerRequest req, HttpServerResponse res)
+	{
+		string error = req.params.get("error", null);
+		res.renderCompat!("userman.reset_password.dt",
+			HttpServerRequest, "req",
+			string, "error")(Variant(req), Variant(error));
+	}
+
+	protected void resetPassword(HttpServerRequest req, HttpServerResponse res)
+	{
+		try {
+			auto password = req.form["password"];
+			auto password_conf = req.form["password_confirmation"];
+			validatePassword(password, password_conf);
+			m_controller.resetPassword(req.form["email"], req.form["code"], password);
+		} catch(Exception e){
+			req.params["error"] = e.msg;
+			showResetPassword(req, res);
+			return;
+		}
+
+		res.renderCompat!("userman.reset_password_done.dt",
+			HttpServerRequest, "req")(req);
+	}
+
 	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
 		string error = req.params.get("error", null);
