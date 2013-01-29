@@ -50,10 +50,16 @@ class UserManController {
 		auto bu = m_users.findOne(["email": email], ["auth": true]);
 		return !bu.isNull() && bu.auth.method.get!string.length > 0;
 	}
+
+	void validateUser(User usr)
+	{
+		enforce(usr.name.length > 3, "User names must be at least 3 characters.");
+		validateEmail(usr.email);
+	}
 	
 	void addUser(User usr)
 	{
-		enforce(usr.name.length > 3, "User names must be at least 3 characters.");
+		validateUser(usr);
 		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
 		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
 		usr._id = BsonObjectID.generate();
@@ -219,6 +225,9 @@ class UserManController {
 
 	void updateUser(User user)
 	{
+		validateUser(user);
+		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
+
 		m_users.update(["_id": user._id], user);
 	}
 	

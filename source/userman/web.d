@@ -74,6 +74,30 @@ class UserManWebInterface {
 		
 		return &requestHandler;
 	}
+
+	void updateProfile(User user, HttpServerRequest req)
+	{
+		if( m_controller.settings.useUserNames ){
+			if( auto pv = "name" in req.form ) user.fullName = *pv;
+			if( auto pv = "email" in req.form ) user.email = *pv;
+		} else {
+			if( auto pv = "email" in req.form ) user.email = user.name = *pv;
+		}
+		if( auto pv = "full_name" in req.form ) user.fullName = *pv;
+
+		if( auto pv = "password" in req.form ){
+			enforce(user.auth.method == "password", "User account has no password authentication.");
+			auto pconf = "password_confirmation" in req.form;
+			enforce(pconf !is null, "Missing password confirmation.");
+			validatePassword(*pv, *pconf);
+			user.auth.passwordHash = generateSimplePasswordHash(*pv);
+		}
+
+		m_controller.updateUser(user);
+
+		req.session["userFullName"] = user.fullName;
+		req.session["userEmail"] = user.email;
+	}
 	
 	protected void showLogin(HttpServerRequest req, HttpServerResponse res)
 	{
@@ -199,7 +223,7 @@ class UserManWebInterface {
 	
 	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
-		string error;
+		string error = req.params.get("error", null);
 		res.renderCompat!("userman.profile.dt",
 			HttpServerRequest, "req",
 			User, "user",
@@ -208,12 +232,11 @@ class UserManWebInterface {
 	
 	protected void changeProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
-		string error;
-		// ...
-	
-		res.renderCompat!("userman.profile.dt",
-			HttpServerRequest, "req",
-			User, "user",
-			string, "error")(Variant(req), Variant(user), Variant(error));
+		try {
+			updateProfile(user, req);
+		} catch( Exception e ){
+			req.params["error"] = e.msg;
+			showProfile(req, res, user);
+		}
 	}
 }

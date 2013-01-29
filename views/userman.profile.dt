@@ -4,4 +4,38 @@ block title
 	- string title = "Edit profile";
 	
 block body
-	p You will be able to modify your profile information here later!
+	h2 Personal information
+
+	form(action="update_profile", method="POST")
+		table
+			col.caption
+			tr
+				td Display name
+				td
+					input(type="text", name="full_name", value=req.form["full_name"])
+			tr
+				td E-mail address
+				td
+					input(type="email", name="email", value=req.form["email"])
+			tr
+				td
+				td
+					button(type="submit") Apply
+
+	h2 Change password
+
+	form(action="update_profile", method="POST")
+		table
+			col.caption
+			tr
+				td New password
+				td
+					input(type="password", name="password", value="")
+			tr
+				td Confirm password
+				td
+					input(type="password", name="password_confirmation", value="")
+			tr
+				td
+				td
+					button(type="submit") Apply
