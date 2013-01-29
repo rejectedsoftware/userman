@@ -269,6 +269,7 @@ class UserManWebInterface {
 			return;
 		}
 
+		res.headers["Refresh"] = "3, /";
 		res.renderCompat!("userman.reset_password_done.dt",
 			HttpServerRequest, "req")(req);
 	}
