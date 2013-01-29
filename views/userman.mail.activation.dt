@@ -13,4 +13,4 @@ html
 		p Otherwise, please open the link below in your browser to confirm the activation:
 		p
 			- string link = serviceUrl~"/activate?email="~urlEncode(user.email)~"&code="~urlEncode(user.activationCode);
-			a(href="link")= link
+			a(href="#{link}")= link
