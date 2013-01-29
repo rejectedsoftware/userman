@@ -1,0 +1,5 @@
+extends layout
+
+block body
+	h1= title
+	block userman.content

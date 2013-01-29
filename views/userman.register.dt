@@ -1,9 +1,9 @@
-extends layout
+extends userman.layout
 
 block title
 	- string title = "Register new account";
 	
-block body
+block userman.content
 	- if( error.length > 0 )
 		p.error= error
 

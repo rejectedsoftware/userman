@@ -1,9 +1,9 @@
-extends layout
+extends userman.layout_popup
 
 block title
 	- auto title = "Resend activation mail";
 
-block body
+block userman.message
 	- if( error.length )
 		p.error= error
 

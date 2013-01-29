@@ -1,9 +1,9 @@
-extends layout
+extends userman.layout
 
 block title
-	- string title = "UserDB Demo";
+	- string title = "UserMan Demo";
 	
-block body
+block userman.content
 	p Hello and Welcome!
 	p
 		a(href="profile") Edit profile

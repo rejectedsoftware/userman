@@ -1,9 +1,9 @@
-extends layout
+extends userman.layout
 
 block title
 	- string title = "Edit profile";
 	
-block body
+block userman.content
 	h2 Personal information
 
 	form(action="update_profile", method="POST")

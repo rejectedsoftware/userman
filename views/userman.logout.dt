@@ -1,7 +1,7 @@
-extends layout
+extends userman.layout_popup
 
 block title
 	- string title = "Logout";
 	
-block body
+block userman.message
 	p You have been successfully logged out.
