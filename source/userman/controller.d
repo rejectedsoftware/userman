@@ -35,6 +35,8 @@ class UserManController {
 	this(UserManSettings settings)
 	{	
 		m_settings = settings;
+		if( m_settings.serviceUrl.endsWith("/") )
+			m_settings.serviceUrl = m_settings.serviceUrl[0 .. $-1];
 
 		auto db = connectMongoDB("127.0.0.1").getDatabase(m_settings.databaseName);
 		m_users = db["userman.users"];
