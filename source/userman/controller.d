@@ -124,7 +124,7 @@ class UserManController {
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
 			mail.headers["To"] = email;
 			mail.headers["Subject"] = "Invitation";
-			mail.headers["Content-Type"] = "text/html";
+			mail.headers["Content-Type"] = "text/html; charset=UTF-8";
 			mail.bodyText = cast(string)msg.data();
 			
 			sendMail(m_settings.mailSettings, mail);
@@ -169,7 +169,7 @@ class UserManController {
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
 		mail.headers["To"] = email;
 		mail.headers["Subject"] = "Account activation";
-		mail.headers["Content-Type"] = "text/html";
+		mail.headers["Content-Type"] = "text/html; charset=UTF-8";
 		mail.bodyText = cast(string)msg.data();
 		
 		sendMail(m_settings.mailSettings, mail);
