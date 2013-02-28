@@ -222,6 +222,9 @@ class UserManWebInterface {
 		m_controller.activateUser(email, code);
 		auto user = m_controller.getUserByEmail(email);
 		auto session = res.startSession();
+		session["userEmail"] = user.email;
+		session["userName"] = user.name;
+		session["userFullName"] = user.fullName;
 		res.renderCompat!("userman.activate.dt",
 			HttpServerRequest, "req")(Variant(req));
 	}
@@ -277,6 +280,8 @@ class UserManWebInterface {
 	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
 	{
 		string error = req.params.get("error", null);
+		req.form["full_name"] = user.fullName;
+		req.form["email"] = user.email;
 		res.renderCompat!("userman.profile.dt",
 			HttpServerRequest, "req",
 			User, "user",
