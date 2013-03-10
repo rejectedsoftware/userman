@@ -9,5 +9,7 @@ block body
 	h1 Invitation to #{serviceName}
 	
 	p Dear #{user.fullName},
-	- string link = serviceUrl~"/register?email="~urlEncode(user.email);
+	- auto link = serviceUrl;
+	- link.path = Path("/register");
+	- link.queryString = "email="~urlEncode(user.email);
 	p You have been invited to #{serviceName}. To accept the invitation, please go to <a href="#{link}">#{link}</a> and register an account.

@@ -151,7 +151,7 @@ class UserManWebInterface {
 			res.terminateSession();
 			req.session = null;
 		}
-		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl;
+		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl.toString();
 		res.renderCompat!("userman.logout.dt",
 			HttpServerRequest, "req")(Variant(req));
 	}

@@ -35,8 +35,6 @@ class UserManController {
 	this(UserManSettings settings)
 	{	
 		m_settings = settings;
-		if( m_settings.serviceUrl.endsWith("/") )
-			m_settings.serviceUrl = m_settings.serviceUrl[0 .. $-1];
 
 		auto db = connectMongoDB("127.0.0.1").getDatabase(m_settings.databaseName);
 		m_users = db["userman.users"];
@@ -117,10 +115,10 @@ class UserManController {
 			parseDietFileCompat!("userman.mail.invitation.dt",
 				User, "user",
 				string, "serviceName",
-				string, "serviceUrl")(msg,
-					Variant(user),
-					Variant(m_settings.serviceName),
-					Variant(m_settings.serviceUrl));
+				Url, "serviceUrl")(msg,
+					user,
+					m_settings.serviceName,
+					m_settings.serviceUrl);
 
 			auto mail = new Mail;
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -162,10 +160,10 @@ class UserManController {
 		parseDietFileCompat!("userman.mail.activation.dt",
 			User, "user",
 			string, "serviceName",
-			string, "serviceUrl")(msg,
-				Variant(user),
-				Variant(m_settings.serviceName),
-				Variant(m_settings.serviceUrl));
+			Url, "serviceUrl")(msg,
+				user,
+				m_settings.serviceName,
+				m_settings.serviceUrl);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
