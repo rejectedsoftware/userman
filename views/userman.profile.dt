@@ -24,7 +24,7 @@ block userman.content
 
 	h2 Change password
 
-	form(action="update_profile", method="POST")
+	form(action="profile", method="POST")
 		table
 			col.caption
 			tr
