@@ -292,6 +292,7 @@ class UserManWebInterface {
 	{
 		try {
 			updateProfile(user, req);
+			res.redirect(m_prefix);
 		} catch( Exception e ){
 			req.params["error"] = e.msg;
 			showProfile(req, res, user);
