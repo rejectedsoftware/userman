@@ -13,18 +13,18 @@ block userman.content
 				td.caption
 					label(for="email") Email:
 				td
-					input(type="email", name="email")
+					input(type="email", name="email", value=req.form.get("email", ""))
 			- if( settings.useUserNames )
 				tr
 					td.caption
 						label(for="name") User name:
 					td
-						input(type="text", name="name")
+						input(type="text", name="name", value=req.form.get("name", ""))
 			tr
 				td.caption
 					label(for="fullName") Full name:
 				td
-					input(type="text", name="fullName")
+					input(type="text", name="fullName", value=req.form.get("fullName", ""))
 			tr
 				td.caption
 					label(for="password") Password:
