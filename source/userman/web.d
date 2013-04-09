@@ -153,7 +153,7 @@ class UserManWebInterface {
 		}
 		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl.toString();
 		res.renderCompat!("userman.logout.dt",
-			HttpServerRequest, "req")(Variant(req));
+			HttpServerRequest, "req")(req);
 	}
 
 	protected void showRegister(HttpServerRequest req, HttpServerResponse res)
@@ -179,7 +179,7 @@ class UserManWebInterface {
 			if( m_controller.settings.requireAccountValidation ){
 				res.renderCompat!("userman.register_activate.dt",
 					HttpServerRequest, "req",
-					string, "error")(Variant(req), Variant(error));
+					string, "error")(req, error);
 			} else {
 				login(req, res);
 			}
@@ -197,7 +197,7 @@ class UserManWebInterface {
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.resend_activation.dt",
 			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
+			string, "error")(req, error);
 	}
 
 	protected void resendActivation(HttpServerRequest req, HttpServerResponse res)
@@ -205,13 +205,13 @@ class UserManWebInterface {
 		try {
 			m_controller.resendActivation(req.form["email"]);
 			res.renderCompat!("userman.resend_activation_done.dt",
-				HttpServerRequest, "req")(Variant(req));
+				HttpServerRequest, "req")(req);
 		} catch( Exception e ){
 			string error = "Failed to send activation mail. Please try again later.";
 			error ~= e.toString();
 			res.renderCompat!("userman.resend_activation.dt",
 				HttpServerRequest, "req",
-				string, "error")(Variant(req), Variant(error));
+				string, "error")(req, error);
 		}
 	}
 
@@ -226,7 +226,7 @@ class UserManWebInterface {
 		session["userName"] = user.name;
 		session["userFullName"] = user.fullName;
 		res.renderCompat!("userman.activate.dt",
-			HttpServerRequest, "req")(Variant(req));
+			HttpServerRequest, "req")(req);
 	}
 	
 	protected void showForgotPassword(HttpServerRequest req, HttpServerResponse res)
@@ -234,7 +234,7 @@ class UserManWebInterface {
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.forgot_login.dt",
 			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
+			string, "error")(req, error);
 	}
 
 	protected void sendPasswordReset(HttpServerRequest req, HttpServerResponse res)
@@ -256,7 +256,7 @@ class UserManWebInterface {
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.reset_password.dt",
 			HttpServerRequest, "req",
-			string, "error")(Variant(req), Variant(error));
+			string, "error")(req, error);
 	}
 
 	protected void resetPassword(HttpServerRequest req, HttpServerResponse res)
@@ -285,7 +285,7 @@ class UserManWebInterface {
 		res.renderCompat!("userman.profile.dt",
 			HttpServerRequest, "req",
 			User, "user",
-			string, "error")(Variant(req), Variant(user), Variant(error));
+			string, "error")(req, user, error);
 	}
 	
 	protected void changeProfile(HttpServerRequest req, HttpServerResponse res, User user)
