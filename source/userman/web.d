@@ -128,7 +128,8 @@ class UserManWebInterface {
 			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
 				"The password you entered is not correct.");
 			
-			auto session = res.startSession();
+			auto session = req.session;
+			if (!session) session = res.startSession();
 			session["userEmail"] = user.email;
 			session["userName"] = username;
 			session["userFullName"] = user.fullName;
