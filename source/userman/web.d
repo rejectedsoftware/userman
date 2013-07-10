@@ -30,7 +30,7 @@ class UserManWebInterface {
 		m_prefix = prefix;
 	}
 	
-	void register(UrlRouter router)
+	void register(URLRouter router)
 	{
 		router.get(m_prefix~"login", &showLogin);
 		router.post(m_prefix~"login", &login);
@@ -48,9 +48,9 @@ class UserManWebInterface {
 		router.post(m_prefix~"profile", auth(&changeProfile));
 	}
 	
-	HttpServerRequestDelegate auth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
+	HTTPServerRequestDelegate auth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
-		void requestHandler(HttpServerRequest req, HttpServerResponse res)
+		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
 			if( !req.session ){
 				res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
@@ -62,14 +62,14 @@ class UserManWebInterface {
 		
 		return &requestHandler;
 	}
-	HttpServerRequestDelegate auth(HttpServerRequestDelegate callback)
+	HTTPServerRequestDelegate auth(HTTPServerRequestDelegate callback)
 	{
 		return auth((req, res, user){ callback(req, res); });
 	}
 	
-	HttpServerRequestDelegate ifAuth(void delegate(HttpServerRequest, HttpServerResponse, User) callback)
+	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
-		void requestHandler(HttpServerRequest req, HttpServerResponse res)
+		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
 			if( !req.session ) return;
 			auto usr = m_controller.getUserByName(req.session["userName"]);
@@ -79,7 +79,7 @@ class UserManWebInterface {
 		return &requestHandler;
 	}
 
-	void updateProfile(User user, HttpServerRequest req)
+	void updateProfile(User user, HTTPServerRequest req)
 	{
 		if( m_controller.settings.useUserNames ){
 			if( auto pv = "name" in req.form ) user.fullName = *pv;
@@ -103,19 +103,19 @@ class UserManWebInterface {
 		req.session["userEmail"] = user.email;
 	}
 	
-	protected void showLogin(HttpServerRequest req, HttpServerResponse res)
+	protected void showLogin(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error;
 		auto prdct = "redirect" in req.query;
 		string redirect = prdct ? *prdct : "";
 		res.renderCompat!("userman.login.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			string, "error",
 			string, "redirect",
 			UserManSettings, "settings")(req, error, redirect, m_controller.settings);
 	}
 	
-	protected void login(HttpServerRequest req, HttpServerResponse res)
+	protected void login(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		auto username = req.form["name"];
 		auto password = req.form["password"];
@@ -139,14 +139,14 @@ class UserManWebInterface {
 			string error = e.msg;
 			string redirect = prdct ? *prdct : "";
 			res.renderCompat!("userman.login.dt",
-				HttpServerRequest, "req",
+				HTTPServerRequest, "req",
 				string, "error",
 				string, "redirect",
 				UserManSettings, "settings")(req, error, redirect, m_controller.settings);
 		}
 	}
 	
-	protected void logout(HttpServerRequest req, HttpServerResponse res)
+	protected void logout(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		if( req.session ){
 			res.terminateSession();
@@ -154,19 +154,19 @@ class UserManWebInterface {
 		}
 		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl.toString();
 		res.renderCompat!("userman.logout.dt",
-			HttpServerRequest, "req")(req);
+			HTTPServerRequest, "req")(req);
 	}
 
-	protected void showRegister(HttpServerRequest req, HttpServerResponse res)
+	protected void showRegister(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error;
 		res.renderCompat!("userman.register.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			string, "error",
 			UserManSettings, "settings")(req, error, m_controller.settings);
 	}
 	
-	protected void register(HttpServerRequest req, HttpServerResponse res)
+	protected void register(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error;
 		try {
@@ -179,7 +179,7 @@ class UserManWebInterface {
 
 			if( m_controller.settings.requireAccountValidation ){
 				res.renderCompat!("userman.register_activate.dt",
-					HttpServerRequest, "req",
+					HTTPServerRequest, "req",
 					string, "error")(req, error);
 			} else {
 				login(req, res);
@@ -187,36 +187,36 @@ class UserManWebInterface {
 		} catch( Exception e ){
 			error = e.msg;
 			res.renderCompat!("userman.register.dt",
-				HttpServerRequest, "req",
+				HTTPServerRequest, "req",
 				string, "error",
 				UserManSettings, "settings")(req, error, m_controller.settings);
 		}
 	}
 	
-	protected void showResendActivation(HttpServerRequest req, HttpServerResponse res)
+	protected void showResendActivation(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.resend_activation.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			string, "error")(req, error);
 	}
 
-	protected void resendActivation(HttpServerRequest req, HttpServerResponse res)
+	protected void resendActivation(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		try {
 			m_controller.resendActivation(req.form["email"]);
 			res.renderCompat!("userman.resend_activation_done.dt",
-				HttpServerRequest, "req")(req);
+				HTTPServerRequest, "req")(req);
 		} catch( Exception e ){
 			string error = "Failed to send activation mail. Please try again later.";
 			error ~= e.toString();
 			res.renderCompat!("userman.resend_activation.dt",
-				HttpServerRequest, "req",
+				HTTPServerRequest, "req",
 				string, "error")(req, error);
 		}
 	}
 
-	protected void activate(HttpServerRequest req, HttpServerResponse res)
+	protected void activate(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		auto email = req.query["email"];
 		auto code = req.query["code"];
@@ -227,18 +227,18 @@ class UserManWebInterface {
 		session["userName"] = user.name;
 		session["userFullName"] = user.fullName;
 		res.renderCompat!("userman.activate.dt",
-			HttpServerRequest, "req")(req);
+			HTTPServerRequest, "req")(req);
 	}
 	
-	protected void showForgotPassword(HttpServerRequest req, HttpServerResponse res)
+	protected void showForgotPassword(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.forgot_login.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			string, "error")(req, error);
 	}
 
-	protected void sendPasswordReset(HttpServerRequest req, HttpServerResponse res)
+	protected void sendPasswordReset(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		try {
 			m_controller.requestPasswordReset(req.form["email"]);
@@ -249,18 +249,18 @@ class UserManWebInterface {
 		}
 
 		res.renderCompat!("userman.forgot_login_sent.dt",
-			HttpServerRequest, "req")(req);
+			HTTPServerRequest, "req")(req);
 	}
 
-	protected void showResetPassword(HttpServerRequest req, HttpServerResponse res)
+	protected void showResetPassword(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		string error = req.params.get("error", null);
 		res.renderCompat!("userman.reset_password.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			string, "error")(req, error);
 	}
 
-	protected void resetPassword(HttpServerRequest req, HttpServerResponse res)
+	protected void resetPassword(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		try {
 			auto password = req.form["password"];
@@ -275,21 +275,21 @@ class UserManWebInterface {
 
 		res.headers["Refresh"] = "3, /";
 		res.renderCompat!("userman.reset_password_done.dt",
-			HttpServerRequest, "req")(req);
+			HTTPServerRequest, "req")(req);
 	}
 
-	protected void showProfile(HttpServerRequest req, HttpServerResponse res, User user)
+	protected void showProfile(HTTPServerRequest req, HTTPServerResponse res, User user)
 	{
 		string error = req.params.get("error", null);
 		req.form["full_name"] = user.fullName;
 		req.form["email"] = user.email;
 		res.renderCompat!("userman.profile.dt",
-			HttpServerRequest, "req",
+			HTTPServerRequest, "req",
 			User, "user",
 			string, "error")(req, user, error);
 	}
 	
-	protected void changeProfile(HttpServerRequest req, HttpServerResponse res, User user)
+	protected void changeProfile(HTTPServerRequest req, HTTPServerResponse res, User user)
 	{
 		try {
 			updateProfile(user, req);

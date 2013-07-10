@@ -15,13 +15,13 @@ static this()
 	auto uctrl = new UserManController(usettings);
 	auto uweb = new UserManWebInterface(uctrl);
 
-	auto router = new UrlRouter;
+	auto router = new URLRouter;
 	uweb.register(router);
 	router.get("/", staticTemplate!"home.dt");
 	
-	auto settings = new HttpServerSettings;
+	auto settings = new HTTPServerSettings;
 	settings.sessionStore = new MemorySessionStore;
 	settings.port = 8080;
 	
-	listenHttp(settings, router);
+	listenHTTP(settings, router);
 }

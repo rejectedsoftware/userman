@@ -115,7 +115,7 @@ class UserManController {
 			parseDietFileCompat!("userman.mail.invitation.dt",
 				User, "user",
 				string, "serviceName",
-				Url, "serviceUrl")(msg,
+				URL, "serviceUrl")(msg,
 					user,
 					m_settings.serviceName,
 					m_settings.serviceUrl);
@@ -160,7 +160,7 @@ class UserManController {
 		parseDietFileCompat!("userman.mail.activation.dt",
 			User, "user",
 			string, "serviceName",
-			Url, "serviceUrl")(msg,
+			URL, "serviceUrl")(msg,
 				user,
 				m_settings.serviceName,
 				m_settings.serviceUrl);

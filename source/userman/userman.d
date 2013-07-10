@@ -15,12 +15,12 @@ class UserManSettings {
 	bool useUserNames = true; // use a user name or the email address for identification?
 	string databaseName = "test";
 	string serviceName = "User database test";
-	Url serviceUrl = "http://www.example.com/";
+	URL serviceUrl = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
-	SmtpClientSettings mailSettings;
+	SMTPClientSettings mailSettings;
 
 	this()
 	{
-		mailSettings = new SmtpClientSettings;
+		mailSettings = new SMTPClientSettings;
 	}
 }
