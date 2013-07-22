@@ -247,6 +247,7 @@ class UserManController {
 	void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
 	{
 		foreach( busr; m_users.find(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count) ){
+			if (max_count-- <= 0) break;
 			auto usr = deserializeBson!User(busr);
 			del(usr);
 		}
