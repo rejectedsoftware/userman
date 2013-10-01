@@ -171,8 +171,9 @@ class UserManWebInterface {
 		string error;
 		try {
 			auto email = validateEmail(req.form["email"]);
-			if( !m_controller.settings.useUserNames ) req.form["name"] = email;
-			auto name = validateUserName(req.form["name"]);
+			if (!m_controller.settings.useUserNames) req.form["name"] = email;
+			else validateUserName(req.form["name"]);
+			auto name = req.form["name"];
 			auto fullname = req.form["fullName"];
 			auto password = validatePassword(req.form["password"], req.form["passwordConfirmation"]);
 			m_controller.registerUser(email, name, fullname, password);
