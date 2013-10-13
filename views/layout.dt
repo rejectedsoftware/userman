@@ -6,4 +6,8 @@ html
 		block head
 	body
 		h1= title
+		- if (req.session)
+			p Logged in as #{req.session["userFullName"]} - <a href="#{req.rootDir}logout">Log out</a>
+		- else
+			p Not logged in - <a href="#{req.rootDir}login">Log in</a>
 		block body

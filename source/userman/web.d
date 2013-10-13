@@ -123,7 +123,7 @@ class UserManWebInterface {
 
 		User user;
 		try {
-			user = m_controller.getUserByName(username);
+			user = m_controller.getUserByEmailOrName(username);
 			enforce(user.active, "The account is not yet activated.");
 			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
 				"The password you entered is not correct.");

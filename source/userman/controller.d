@@ -244,6 +244,15 @@ class UserManController {
 		return ret;
 	}
 
+	User getUserByEmailOrName(string email_or_name)
+	{
+		auto busr = m_users.findOne(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
+		enforce(!busr.isNull(), "The specified email address or user name is not registered.");
+		auto ret = new User;
+		deserializeBson(ret, busr);
+		return ret;
+	}
+
 	void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
 	{
 		foreach( busr; m_users.find(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count) ){

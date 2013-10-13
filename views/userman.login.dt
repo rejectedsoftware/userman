@@ -17,9 +17,9 @@ block userman.content
 				tr
 					td
 						- if( settings.useUserNames )
-							label(for="login-name") Username:
+							label(for="login-name") Username/e-mail:
 						- else
-							label(for="login-name") Email:
+							label(for="login-name") E-mail:
 					td
 						input#login-name(type="text", name="name")
 				tr
