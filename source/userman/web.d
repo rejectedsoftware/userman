@@ -131,7 +131,7 @@ class UserManWebInterface {
 			auto session = req.session;
 			if (!session) session = res.startSession();
 			session["userEmail"] = user.email;
-			session["userName"] = username;
+			session["userName"] = user.name;
 			session["userFullName"] = user.fullName;
 			res.redirect(prdct ? *prdct : m_prefix);
 		} catch( Exception e ){
