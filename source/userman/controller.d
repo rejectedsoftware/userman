@@ -139,6 +139,7 @@ class UserManController {
 
 		auto busr = m_users.findOne(["email": email]);
 		enforce(!busr.isNull(), "There is no user account for the specified email address.");
+		enforce(!busr.active, "This user account is already activated.");
 		enforce(busr.activationCode.get!string == activation_code, "The activation code provided is not valid.");
 		busr.active = true;
 		busr.activationCode = "";
