@@ -2,8 +2,8 @@
 	"name": "userman",
 	"description": "User management DB and frontend with account activation support",
     "authors": ["Sönke Ludwig"],
-	"copyright": "Copyright (c) 2012 Sönke Ludwig",
-	"license": "GPL 3",
+	"copyright": "Copyright (c) 2012-2013 rejectedsoftware e.K.",
+	"license": "GPL-3.0",
 	"dependencies": {
 		"vibe-d": "~master"
 	}
