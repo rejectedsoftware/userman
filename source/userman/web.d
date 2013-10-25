@@ -274,7 +274,7 @@ class UserManWebInterface {
 			return;
 		}
 
-		res.headers["Refresh"] = "3, " ~ m_controller.settings.serviceUrl.toString();
+		res.headers["Refresh"] = "3; url=" ~ m_controller.settings.serviceUrl.toString();
 		res.renderCompat!("userman.reset_password_done.dt",
 			HTTPServerRequest, "req")(req);
 	}
