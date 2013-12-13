@@ -223,7 +223,8 @@ class UserManWebInterface {
 		auto code = req.query["code"];
 		m_controller.activateUser(email, code);
 		auto user = m_controller.getUserByEmail(email);
-		auto session = res.startSession();
+		auto session = req.session;
+		if (!session) session = res.startSession();
 		session["userEmail"] = user.email;
 		session["userName"] = user.name;
 		session["userFullName"] = user.fullName;
