@@ -9,7 +9,7 @@ import vibe.d;
 
 import userman.web;
 
-static this()
+shared static this()
 {
 	auto usettings = new UserManSettings;
 	auto uctrl = new UserManController(usettings);
