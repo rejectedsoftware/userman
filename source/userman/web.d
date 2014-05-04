@@ -99,6 +99,7 @@ class UserManWebInterface {
 
 		m_controller.updateUser(user);
 
+		req.session["userName"] = user.name;
 		req.session["userFullName"] = user.fullName;
 		req.session["userEmail"] = user.email;
 	}
