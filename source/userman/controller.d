@@ -265,7 +265,7 @@ class UserManController {
 
 	long getUserCount()
 	{
-		return m_users.count(Bson.EmptyObject);
+		return m_users.count(Bson.emptyObject);
 	}
 
 	void deleteUser(BsonObjectID user_id)
