@@ -125,9 +125,18 @@ class UserManWebInterface {
 		User user;
 		try {
 			user = m_controller.getUserByEmailOrName(username);
+			enforce(testSimplePasswordHash(user.auth.passwordHash, password), "Wrong password.");
+		} catch (Exception e) {
+			logDebug("Error logging in: %s", e.toString());
+			string error = "Invalid user/email or password.";
+			string redirect = prdct ? *prdct : "";
+			auto settings = m_controller.settings;
+			res.render!("userman.login.dt", req, error, redirect, settings);
+			return;
+		}
+
+		try {
 			enforce(user.active, "The account is not yet activated.");
-			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
-				"The password you entered is not correct.");
 			
 			auto session = req.session;
 			if (!session) session = res.startSession();
@@ -247,9 +256,8 @@ class UserManWebInterface {
 		try {
 			m_controller.requestPasswordReset(req.form["email"]);
 		} catch(Exception e){
-			req.params["error"] = e.msg;
-			showForgotPassword(req, res);
-			return;
+			// ignore errors, so that registered e-mails cannot be determined
+			logDiagnostic("Failed to send password reset mail to %s: %s", req.form["email"], e.msg);
 		}
 
 		res.renderCompat!("userman.forgot_login_sent.dt",
