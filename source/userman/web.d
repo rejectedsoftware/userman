@@ -52,12 +52,8 @@ class UserManWebInterface {
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
-			if( !req.session ){
-				res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
-			} else {
-				auto usr = m_controller.getUserByName(req.session["userName"]);
+			if (auto usr = performAuth(req, res))
 				callback(req, res, usr);
-			}
 		}
 		
 		return &requestHandler;
@@ -65,6 +61,16 @@ class UserManWebInterface {
 	HTTPServerRequestDelegate auth(HTTPServerRequestDelegate callback)
 	{
 		return auth((req, res, user){ callback(req, res); });
+	}
+
+	User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+	{
+		if (!req.session) {
+			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
+			return null;
+		} else {
+			return m_controller.getUserByName(req.session["userName"]);
+		}
 	}
 	
 	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
