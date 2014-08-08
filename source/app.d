@@ -13,10 +13,9 @@ shared static this()
 {
 	auto usettings = new UserManSettings;
 	auto uctrl = new UserManController(usettings);
-	auto uweb = new UserManWebInterface(uctrl);
 
 	auto router = new URLRouter;
-	uweb.register(router);
+	router.registerUserManWebInterface(uctrl);
 	router.get("/", staticTemplate!"home.dt");
 	
 	auto settings = new HTTPServerSettings;
