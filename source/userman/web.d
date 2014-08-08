@@ -33,6 +33,38 @@ void registerUserManWebInterface(URLRouter router, UserManController controller)
 
 
 /**
+	Helper function to update the user profile from a POST request.
+
+	This assumes that the fields are named like they are in userman.profile.dt.
+	Session variables will be updated automatically.
+*/
+void updateProfile(UserManController controller, User user, HTTPServerRequest req)
+{
+	if (controller.settings.useUserNames) {
+		if (auto pv = "name" in req.form) user.fullName = *pv;
+		if (auto pv = "email" in req.form) user.email = *pv;
+	} else {
+		if (auto pv = "email" in req.form) user.email = user.name = *pv;
+	}
+	if (auto pv = "full_name" in req.form) user.fullName = *pv;
+
+	if (auto pv = "password" in req.form) {
+		enforce(user.auth.method == "password", "User account has no password authentication.");
+		auto pconf = "password_confirmation" in req.form;
+		enforce(pconf !is null, "Missing password confirmation.");
+		validatePassword(*pv, *pconf);
+		user.auth.passwordHash = generateSimplePasswordHash(*pv);
+	}
+
+	controller.updateUser(user);
+
+	req.session["userName"] = user.name;
+	req.session["userFullName"] = user.fullName;
+	req.session["userEmail"] = user.email;
+}
+
+
+/**
 	Used to privide request authentication for web applications.
 */
 class UserManWebAuthenticator {
@@ -188,31 +220,6 @@ class UserManWebInterface {
 		m_prefix = prefix;
 	}
 	
-	private void updateProfile(User user, HTTPServerRequest req)
-	{
-		if( m_controller.settings.useUserNames ){
-			if( auto pv = "name" in req.form ) user.fullName = *pv;
-			if( auto pv = "email" in req.form ) user.email = *pv;
-		} else {
-			if( auto pv = "email" in req.form ) user.email = user.name = *pv;
-		}
-		if( auto pv = "full_name" in req.form ) user.fullName = *pv;
-
-		if( auto pv = "password" in req.form ){
-			enforce(user.auth.method == "password", "User account has no password authentication.");
-			auto pconf = "password_confirmation" in req.form;
-			enforce(pconf !is null, "Missing password confirmation.");
-			validatePassword(*pv, *pconf);
-			user.auth.passwordHash = generateSimplePasswordHash(*pv);
-		}
-
-		m_controller.updateUser(user);
-
-		req.session["userName"] = user.name;
-		req.session["userFullName"] = user.fullName;
-		req.session["userEmail"] = user.email;
-	}
-	
 	void getLogin(string redirect = "", string _error = "")
 	{
 		string error = _error;
@@ -260,7 +267,7 @@ class UserManWebInterface {
 	{
 		string username;
 		if (m_controller.settings.useUserNames) {
-			enforce(!name.isNull, "Missing user name field.");
+			enforce(!name.isNull(), "Missing user name field.");
 			username = name;
 		} else username = email;
 
@@ -350,7 +357,7 @@ class UserManWebInterface {
 	@auth @errorDisplay!getProfile
 	void postProfile(HTTPServerRequest req, User _user)
 	{
-		updateProfile(_user, req);
+		updateProfile(m_controller, _user, req);
 		redirect(m_prefix);
 	}
 
