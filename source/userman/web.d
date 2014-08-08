@@ -301,10 +301,12 @@ class UserManWebInterface {
 		string error = req.params.get("error", null);
 		req.form["full_name"] = user.fullName;
 		req.form["email"] = user.email;
+		bool useUserNames = m_controller.settings.useUserNames;
 		res.renderCompat!("userman.profile.dt",
 			HTTPServerRequest, "req",
 			User, "user",
-			string, "error")(req, user, error);
+			bool, "useUserNames",
+			string, "error")(req, user, useUserNames, error);
 	}
 	
 	protected void changeProfile(HTTPServerRequest req, HTTPServerResponse res, User user)
