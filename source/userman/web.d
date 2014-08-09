@@ -244,7 +244,7 @@ class UserManWebInterface {
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
-		m_sessUserID = user._id.toString();
+		m_sessUserID = user.id;
 		.redirect(redirect.length ? redirect : m_prefix);
 	}
 	
@@ -306,7 +306,7 @@ class UserManWebInterface {
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
-		m_sessUserID = user._id.toString();
+		m_sessUserID = user.id;
 		render!("userman.activate.dt");
 	}
 	

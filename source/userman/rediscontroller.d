@@ -19,7 +19,8 @@ import std.conv;
 
 class RedisController : UserManController {
 	private {
-		RedisClient m_redis;
+		RedisClient m_redisClient;
+		RedisDatabase m_redisDB;
 	}
 	
 	this(UserManSettings settings)
@@ -46,15 +47,15 @@ class RedisController : UserManController {
 		if (!url.path.empty)
 			dbIndex = to!long(url.path.nodes[0].toString());
 
-		m_redis = new RedisClient(url.host, url.port == ushort.init ? 6379 : url.port);
-		m_redis.select(dbIndex);
+		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
+		m_redisDB = m_redisClient.getDatabase(dbIndex);
 	}
 
 	override bool isEmailRegistered(string email)
 	{
-		string userId = m_redis.get!string("userman:email_user:" ~ email);
+		string userId = m_redisDB.get!string("userman:email_user:" ~ email);
 		if (userId != string.init){
-			string method = m_redis.hget!string(format("userman:user:%s:auth"), "method");
+			string method = m_redisDB.hget!string(format("userman:user:%s:auth"), "method");
 			return method != string.init && method.length > 0;
 		}
 		return false;
@@ -64,19 +65,19 @@ class RedisController : UserManController {
 	{
 		validateUser(usr);
 
-		enforce(m_redis.get!string("userman:name_user:" ~ usr.name) == string.init, "The user name is already taken.");
-		enforce(m_redis.get!string("userman:email_user:" ~ usr.email) == string.init, "The email address is already in use.");
+		enforce(m_redisDB.get!string("userman:name_user:" ~ usr.name) == string.init, "The user name is already taken.");
+		enforce(m_redisDB.get!string("userman:email_user:" ~ usr.email) == string.init, "The email address is already in use.");
 
-		long userId = m_redis.incr("userman:nextUserId");
+		long userId = m_redisDB.incr("userman:nextUserId");
 		usr.id = to!string(userId);
 
 		// Indexes
-		m_redis.zadd("userman:users", userId, userId);
-		if (usr.email != string.init) m_redis.set("userman:email_user:" ~ usr.email, to!string(userId));
-		if (usr.name != string.init) m_redis.set("userman:name_user:" ~ usr.name, to!string(userId));
+		m_redisDB.zadd("userman:users", userId, userId);
+		if (usr.email != string.init) m_redisDB.set("userman:email_user:" ~ usr.email, to!string(userId));
+		if (usr.name != string.init) m_redisDB.set("userman:name_user:" ~ usr.name, to!string(userId));
 
 		// User
-		m_redis.hmset(format("userman:user:%s", userId), 
+		m_redisDB.hmset(format("userman:user:%s", userId), 
 						"active", to!string(usr.active), 
 						"banned", to!string(usr.banned), 
 						"name", usr.name, 
@@ -87,7 +88,7 @@ class RedisController : UserManController {
 						"resetCodeExpireTime", usr.resetCodeExpireTime == SysTime() ? "" : usr.resetCodeExpireTime.toISOExtString());
 
 		// Credentials
-		m_redis.hmset(format("userman:user:%s:auth", userId),
+		m_redisDB.hmset(format("userman:user:%s:auth", userId),
 						"method", usr.auth.method,
 						"passwordHash", usr.auth.passwordHash,
 						"token", usr.auth.token,
@@ -95,12 +96,12 @@ class RedisController : UserManController {
 						"info", usr.auth.info);
 
 		foreach(string group; usr.groups)
-			m_redis.sadd("userman:group:" ~ group ~ ":members", userId);
+			m_redisDB.sadd("userman:group:" ~ group ~ ":members", userId);
 	}
 
 	override User getUser(string id)
 	{
-		RedisReply userHash = m_redis.hgetAll("userman:user:" ~ id);
+		auto userHash = m_redisDB.hgetAll("userman:user:" ~ id);
 		enforce(userHash.hasNext(), "The specified user id is invalid.");
 
 		auto ret = new User;
@@ -127,7 +128,7 @@ class RedisController : UserManController {
 		 	}
 		}
 
-		RedisReply authHash = m_redis.hgetAll(format("userman:user:%s:auth", id));
+		auto authHash = m_redisDB.hgetAll(format("userman:user:%s:auth", id));
 		if(authHash.hasNext()) {
 			AuthInfo auth;
 			while (authHash.hasNext()) {
@@ -146,10 +147,10 @@ class RedisController : UserManController {
 			ret.auth = auth;
 		}
 
-		RedisReply groupNames = m_redis.zrange("userman:groups", 0, -1);
+		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1);
 		while (groupNames.hasNext()) {
 			string name = groupNames.next!string();
-			if (m_redis.sisMember("userman:group:" ~ name ~ ":members", id))
+			if (m_redisDB.sisMember("userman:group:" ~ name ~ ":members", id))
 			{
 				++ret.groups.length;
 				ret.groups[ret.groups.length - 1] = name;
@@ -163,7 +164,7 @@ class RedisController : UserManController {
 	{
 		name = name.toLower();
 
-		string userId = m_redis.get!string("userman:name_user:" ~ name);
+		string userId = m_redisDB.get!string("userman:name_user:" ~ name);
 		try {
 			return getUser(userId);
 		}
@@ -176,7 +177,7 @@ class RedisController : UserManController {
 	{
 		email = email.toLower();
 
-		string userId = m_redis.get!string("userman:email_user:" ~ email);
+		string userId = m_redisDB.get!string("userman:email_user:" ~ email);
 		try {
 			return getUser(userId);
 		}
@@ -187,9 +188,9 @@ class RedisController : UserManController {
 
 	override User getUserByEmailOrName(string email_or_name)
 	{
-		string userId = m_redis.get!string("userman:email_user:" ~ email_or_name.toLower());
+		string userId = m_redisDB.get!string("userman:email_user:" ~ email_or_name.toLower());
 		if (userId == null) 
-			userId = m_redis.get!string("userman:name_user:" ~ email_or_name);
+			userId = m_redisDB.get!string("userman:name_user:" ~ email_or_name);
 
 		try {
 			return getUser(userId);
@@ -201,7 +202,7 @@ class RedisController : UserManController {
 
 	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
 	{
-		RedisReply userIds = m_redis.zrange("userman:users", first_user, first_user + max_count);
+		auto userIds = m_redisDB.zrange("userman:users", first_user, first_user + max_count);
 		while (userIds.hasNext()) {
 			auto usr = getUser(userIds.next!string());
 			del(usr);
@@ -210,7 +211,7 @@ class RedisController : UserManController {
 
 	override long getUserCount()
 	{
-		return m_redis.Zcard("userman:users");
+		return m_redisDB.zcard("userman:users");
 	}
 
 	override void deleteUser(string user_id)
@@ -220,19 +221,19 @@ class RedisController : UserManController {
 		if (usr !is null)
 		{
 			// Indexes
-			m_redis.zrem("userman:users", user_id);
-			m_redis.del("userman:email_user:" ~ usr.email);
-			m_redis.del("userman:name_user:" ~ usr.name);
+			m_redisDB.zrem("userman:users", user_id);
+			m_redisDB.del("userman:email_user:" ~ usr.email);
+			m_redisDB.del("userman:name_user:" ~ usr.name);
 
 			// User
-			m_redis.del(format("userman:user:%s", user_id));
+			m_redisDB.del(format("userman:user:%s", user_id));
 
 			// Credentials
-			m_redis.del(format("userman:user:%s:auth", user_id));
+			m_redisDB.del(format("userman:user:%s:auth", user_id));
 
 			// Group membership
 			foreach(string group; usr.groups)
-				m_redis.srem("userman:group:" ~ group ~ ":members", user_id);
+				m_redisDB.srem("userman:group:" ~ group ~ ":members", user_id);
 		}
 	}
 
@@ -242,7 +243,7 @@ class RedisController : UserManController {
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
 		// User
-		m_redis.hmset(format("userman:user:%s", user.id), 
+		m_redisDB.hmset(format("userman:user:%s", user.id), 
 						"active", to!string(user.active), 
 						"banned", to!string(user.banned), 
 						"name", user.name, 
@@ -253,7 +254,7 @@ class RedisController : UserManController {
 						"resetCodeExpireTime", user.resetCodeExpireTime == SysTime() ? "" : user.resetCodeExpireTime.toISOExtString());
 
 		// Credentials
-		m_redis.hmset(format("userman:user:%s:auth", user.id),
+		m_redisDB.hmset(format("userman:user:%s:auth", user.id),
 						"method", user.auth.method,
 						"passwordHash", user.auth.passwordHash,
 						"token", user.auth.token,
@@ -261,27 +262,27 @@ class RedisController : UserManController {
 						"info", user.auth.info);
 
 
-		RedisReply groupNames = m_redis.zrange("userman:groups", 0, -1);
+		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1);
 		while (groupNames.hasNext()) {
 			string name = groupNames.next!string();
 			if (user.isInGroup(name))
-				m_redis.sadd("userman:group:" ~ name ~ ":members", user.id);
+				m_redisDB.sadd("userman:group:" ~ name ~ ":members", user.id);
 			else
-				m_redis.srem("userman:group:" ~ name ~ ":members", user.id);
+				m_redisDB.srem("userman:group:" ~ name ~ ":members", user.id);
 		}
 	}
 	
 	override void addGroup(string name, string description)
 	{
-		enforce(!m_redis.hexists("userman:groups", name), "A group with this name already exists.");
+		enforce(!m_redisDB.hexists("userman:groups", name), "A group with this name already exists.");
 
-		long groupId = m_redis.incr("userman:nextGroupId");
+		long groupId = m_redisDB.incr("userman:nextGroupId");
 
 		// Index
-		m_redis.zadd("userman:groups", groupId, name);
+		m_redisDB.zadd("userman:groups", groupId, name);
 
 		// Group
-		m_redis.hmset(format("userman:group:%s", groupId),
+		m_redisDB.hmset(format("userman:group:%s", groupId),
 						"name", name,
 						"description", description);
 
