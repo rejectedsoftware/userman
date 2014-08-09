@@ -26,31 +26,18 @@ import std.string;
 
 
 class UserManController {
-	private {
-		MongoCollection m_users;
-		MongoCollection m_groups;
+	protected {
 		UserManSettings m_settings;
 	}
 	
 	this(UserManSettings settings)
 	{	
 		m_settings = settings;
-
-		auto db = connectMongoDB("127.0.0.1").getDatabase(m_settings.databaseName);
-		m_users = db["userman.users"];
-		m_groups = db["userman.groups"];
-
-		m_users.ensureIndex(["name": 1], IndexFlags.Unique);
-		m_users.ensureIndex(["email": 1], IndexFlags.Unique);
 	}
 
 	@property UserManSettings settings() { return m_settings; }
 
-	bool isEmailRegistered(string email)
-	{
-		auto bu = m_users.findOne(["email": email], ["auth": true]);
-		return !bu.isNull() && bu.auth.method.get!string.length > 0;
-	}
+	abstract bool isEmailRegistered(string email);
 
 	void validateUser(User usr)
 	{
@@ -58,16 +45,9 @@ class UserManController {
 		validateEmail(usr.email);
 	}
 	
-	void addUser(User usr)
-	{
-		validateUser(usr);
-		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
-		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
-		usr._id = BsonObjectID.generate();
-		m_users.insert(usr);
-	}
+	abstract void addUser(User usr);
 
-	BsonObjectID registerUser(string email, string name, string full_name, string password)
+	string registerUser(string email, string name, string full_name, string password)
 	{
 		email = email.toLower();
 		name = name.toLower();
@@ -77,7 +57,6 @@ class UserManController {
 
 		auto need_activation = m_settings.requireAccountValidation;
 		auto user = new User;
-		user._id = BsonObjectID.generate();
 		user.active = !need_activation;
 		user.name = name;
 		user.fullName = full_name;
@@ -86,76 +65,73 @@ class UserManController {
 		user.email = email;
 		if( need_activation )
 			user.activationCode = generateActivationCode();
+
 		addUser(user);
 		
 		if( need_activation )
 			resendActivation(email);
 
-		return user._id;
+		return user.id;
 	}
 
-	BsonObjectID inviteUser(string email, string full_name, string message)
+	string inviteUser(string email, string full_name, string message)
 	{
 		email = email.toLower();
 
 		validateEmail(email);
 
-		auto existing = m_users.findOne(["email": email], ["_id": true]);
-		if( !existing.isNull() ) return existing._id.get!BsonObjectID;
-
-		auto user = new User;
-		user._id = BsonObjectID.generate();
-		user.email = email;
-		user.name = email;
-		user.fullName = full_name;
-		addUser(user);
-
-		if( m_settings.mailSettings ){
-			auto msg = new MemoryOutputStream;
-			parseDietFileCompat!("userman.mail.invitation.dt",
-				User, "user",
-				string, "serviceName",
-				URL, "serviceUrl")(msg,
-					user,
-					m_settings.serviceName,
-					m_settings.serviceUrl);
-
-			auto mail = new Mail;
-			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
-			mail.headers["To"] = email;
-			mail.headers["Subject"] = "Invitation";
-			mail.headers["Content-Type"] = "text/html; charset=UTF-8";
-			mail.bodyText = cast(string)msg.data();
-			
-			sendMail(m_settings.mailSettings, mail);
+		try {
+			return getUserByEmail(email).id;
 		}
+		catch (Exception e) {
+			auto user = new User;
+			user.email = email;
+			user.name = email;
+			user.fullName = full_name;
+			addUser(user);
 
-		return user._id;
+			if( m_settings.mailSettings ){
+				auto msg = new MemoryOutputStream;
+				parseDietFileCompat!("userman.mail.invitation.dt",
+					User, "user",
+					string, "serviceName",
+					URL, "serviceUrl")(msg,
+						user,
+						m_settings.serviceName,
+						m_settings.serviceUrl);
+
+				auto mail = new Mail;
+				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
+				mail.headers["To"] = email;
+				mail.headers["Subject"] = "Invitation";
+				mail.headers["Content-Type"] = "text/html; charset=UTF-8";
+				mail.bodyText = cast(string)msg.data();
+				
+				sendMail(m_settings.mailSettings, mail);
+			}
+
+			return user.id;
+		}
 	}
 
 	void activateUser(string email, string activation_code)
 	{
 		email = email.toLower();
 
-		auto busr = m_users.findOne(["email": email]);
-		enforce(!busr.isNull(), "There is no user account for the specified email address.");
-		enforce(!busr.active, "This user account is already activated.");
-		enforce(busr.activationCode.get!string == activation_code, "The activation code provided is not valid.");
-		busr.active = true;
-		busr.activationCode = "";
-		m_users.update(["_id": busr._id], busr);
+		auto user = getUserByEmail(email);
+		enforce(!user.active, "This user account is already activated.");
+		enforce(user.activationCode == activation_code, "The activation code provided is not valid.");
+		user.active = true;
+		user.activationCode = "";
+		updateUser(user);
 	}
 	
 	void resendActivation(string email)
 	{
 		email = email.toLower();
 
-		auto busr = m_users.findOne(["email": email]);
-		enforce(!busr.isNull(), "There is no user account for the specified email address.");
-		enforce(!busr.active, "The user account is already active.");
-		
-		auto user = new User;
-		deserializeBson(user, busr);
+		auto user = getUserByEmail(email);
+		enforce(!user.active, "The user account is already active.");
 		
 		auto msg = new MemoryOutputStream;
 		parseDietFileCompat!("userman.mail.activation.dt",
@@ -181,8 +157,10 @@ class UserManController {
 		auto usr = getUserByEmail(email);
 
 		string reset_code = generateActivationCode();
-		BsonDate expire_time = BsonDate(Clock.currTime() + dur!"hours"(24));
-		m_users.update(["_id": usr._id], ["$set": ["resetCode": Bson(reset_code), "resetCodeExpireTime": Bson(expire_time)]]);
+		SysTime expire_time = Clock.currTime() + dur!"hours"(24);
+		usr.resetCode = reset_code;
+		usr.resetCodeExpireTime = expire_time;
+		updateUser(usr);
 
 		if( m_settings.mailSettings ){
 			auto msg = new MemoryOutputStream;
@@ -207,93 +185,36 @@ class UserManController {
 		validatePassword(new_password, new_password);
 		auto usr = getUserByEmail(email);
 		enforce(usr.resetCode.length > 0, "No password reset request was made.");
-		enforce(Clock.currTime() < usr.resetCodeExpireTime.toSysTime(), "Reset code is expired, please request a new one.");
-		m_users.update(["_id": usr._id], ["$set": ["resetCode": ""]]);
+		enforce(Clock.currTime() < usr.resetCodeExpireTime, "Reset code is expired, please request a new one.");
+		usr.resetCode = "";
+		updateUser(usr);
 		auto code = usr.resetCode;
 		enforce(reset_code == code, "Invalid request code, please request a new one.");
-		m_users.update(["_id": usr._id], ["$set": ["auth.passwordHash": generateSimplePasswordHash(new_password)]]);
+		usr.auth.passwordHash = generateSimplePasswordHash(new_password);
+		updateUser(usr);
 	}
 
-	User getUser(BsonObjectID id)
-	{
-		auto busr = m_users.findOne(["_id": id]);
-		enforce(!busr.isNull(), "The specified user id is invalid.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
-	}
+	abstract User getUser(string id);
 
-	User getUserByName(string name)
-	{
-		name = name.toLower();
+	abstract User getUserByName(string name);
 
-		auto busr = m_users.findOne(["name": name]);
-		enforce(!busr.isNull(), "The specified user name is not registered.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
-	}
+	abstract User getUserByEmail(string email);
 
-	User getUserByEmail(string email)
-	{
-		email = email.toLower();
+	abstract User getUserByEmailOrName(string email_or_name);
 
-		auto busr = m_users.findOne(["email": email]);
-		enforce(!busr.isNull(), "The specified email address is not registered.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
-	}
+	abstract void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del);
 
-	User getUserByEmailOrName(string email_or_name)
-	{
-		auto busr = m_users.findOne(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
-		enforce(!busr.isNull(), "The specified email address or user name is not registered.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
-	}
+	abstract long getUserCount();
 
-	void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
-	{
-		foreach( busr; m_users.find(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count) ){
-			if (max_count-- <= 0) break;
-			auto usr = deserializeBson!User(busr);
-			del(usr);
-		}
-	}
+	abstract void deleteUser(string user_id);
 
-	long getUserCount()
-	{
-		return m_users.count(Bson.EmptyObject);
-	}
+	abstract void updateUser(User user);
 
-	void deleteUser(BsonObjectID user_id)
-	{
-		m_users.remove(["_id": user_id]);
-	}
-
-	void updateUser(User user)
-	{
-		validateUser(user);
-		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
-
-		m_users.update(["_id": user._id], user);
-	}
-	
-	void addGroup(string name, string description)
-	{
-		enforce(m_groups.findOne(["name": name]).isNull(), "A group with this name already exists.");
-		auto grp = new Group;
-		grp._id = BsonObjectID.generate();
-		grp.name = name;
-		grp.description = description;
-		m_groups.insert(grp);
-	}
+	abstract void addGroup(string name, string description);
 }
 
 class User {
-	BsonObjectID _id;
+	string id;
 	bool active;
 	bool banned;
 	string name;
@@ -302,10 +223,48 @@ class User {
 	string[] groups;
 	string activationCode;
 	string resetCode;
-	BsonDate resetCodeExpireTime;
+	SysTime resetCodeExpireTime;
 	AuthInfo auth;
 	Bson[string] properties;
 	
+	Bson toBson() const
+	{
+		Bson[string] props;
+		props["_id"] = BsonObjectID.fromString(id);
+		props["active"] = Bson(active);
+		props["banned"] = Bson(banned);
+		props["name"] = Bson(name);
+		props["fullName"] = Bson(fullName);
+		props["email"] = Bson(email);
+		props["groups"] = serializeToBson(groups);
+		props["activationCode"] = Bson(activationCode);
+		props["resetCode"] = Bson(resetCode);
+		props["resetCodeExpireTime"] = BsonDate(resetCodeExpireTime);
+		props["auth"] = serializeToBson(auth);
+		props["properties"] = serializeToBson(properties);
+
+		return Bson(props);
+	}
+
+	static User fromBson(Bson src)
+	{
+		auto usr = new User;
+		usr.id = src["_id"].get!BsonObjectID().toString();
+		usr.active = src["active"].get!bool;
+		usr.banned = src["banned"].get!bool;
+		usr.name = src["name"].get!string;
+		usr.fullName = src["fullName"].get!string;
+		usr.email = src["email"].get!string;
+		usr.groups = deserializeBson!(string[])(src["groups"]);
+		usr.activationCode = src["activationCode"].get!string;
+		usr.resetCode = src["resetCode"].get!string;
+		usr.resetCodeExpireTime = src["resetCodeExpireTime"].get!BsonDate().toSysTime();
+		usr.auth = deserializeBson!AuthInfo(src["auth"]);
+		usr.properties = deserializeBson!(Bson[string])(src["properties"]);
+
+		return usr;
+	}
+
 	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
 }
 
@@ -318,9 +277,29 @@ struct AuthInfo {
 }
 
 class Group {
-	BsonObjectID _id;
+	string id;
 	string name;
 	string description;
+
+	Bson toBson() const
+	{
+		Bson[string] props;
+		props["_id"] = Bson(BsonObjectID.fromString(id));
+		props["name"] = Bson(name);
+		props["description"] = Bson(description);
+
+		return Bson(props);
+	}
+
+	static Group fromBson(Bson src)
+	{
+		auto grp = new Group;
+		grp.id = src["_id"].get!BsonObjectID().toString();
+		grp.name = src["name"].get!string;
+		grp.description = src["description"].get!string;
+		
+		return grp;
+	}
 }
 
 string generateActivationCode()

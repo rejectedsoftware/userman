@@ -8,11 +8,12 @@
 import vibe.d;
 
 import userman.web;
+import userman.mongocontroller;
 
 shared static this()
 {
 	auto usettings = new UserManSettings;
-	auto uctrl = new UserManController(usettings);
+	auto uctrl = new MongoController(usettings);
 	auto uweb = new UserManWebInterface(uctrl);
 
 	auto router = new URLRouter;

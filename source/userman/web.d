@@ -133,7 +133,7 @@ class UserManWebInterface {
 			session["userEmail"] = user.email;
 			session["userName"] = user.name;
 			session["userFullName"] = user.fullName;
-			session["userID"] = user._id.toString();
+			session["userID"] = user.id;
 			res.redirect(prdct ? *prdct : m_prefix);
 		} catch( Exception e ){
 			logDebug("Error logging in: %s", e.toString());
