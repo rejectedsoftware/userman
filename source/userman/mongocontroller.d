@@ -104,7 +104,7 @@ class MongoController : UserManController {
 
 	override long getUserCount()
 	{
-		return m_users.count(Bson.EmptyObject);
+		return m_users.count(Bson.emptyObject);
 	}
 
 	override void deleteUser(string user_id)

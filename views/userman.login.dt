@@ -21,7 +21,7 @@ block userman.content
 						- else
 							label(for="login-name") E-mail:
 					td
-						input#login-name(type="text", name="name")
+						input#login-name(type="text", name="name", autofocus)
 				tr
 					td
 						label(for="login-password") Password:

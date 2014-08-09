@@ -5,7 +5,18 @@
 	"copyright": "Copyright (c) 2012-2013 rejectedsoftware e.K.",
 	"license": "GPL-3.0",
 	"dependencies": {
-		"vibe-d": "~>0.7.18"
+		"vibe-d": "~>0.7.20"
 	},
-	"versions": ["VibeDefaultMain"]
+	"configurations": [
+		{
+			"name": "application",
+			"targetType": "executable",
+			"versions": ["VibeDefaultMain"]
+		},
+		{
+			"name": "library",
+			"targetType": "library",
+			"excludedSourceFiles": ["source/app.d"]
+		}
+	]
 }

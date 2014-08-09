@@ -9,6 +9,10 @@ block userman.content
 	form(action="profile", method="POST")
 		table
 			col.caption
+			- if (useUserNames)
+				tr
+					td User name
+					td= user.name
 			tr
 				td Display name
 				td

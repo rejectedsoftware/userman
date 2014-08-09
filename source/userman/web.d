@@ -1,7 +1,7 @@
 /**
 	Web interface implementation
 
-	Copyright: © 2012 RejectedSoftware e.K.
+	Copyright: © 2012-2014 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -14,50 +14,77 @@ import vibe.crypto.passwordhash;
 import vibe.http.router;
 import vibe.textfilter.urlencode;
 import vibe.utils.validation;
+import vibe.web.web;
 
 import std.exception;
 
 
-class UserManWebInterface {
+/**
+	Registers the routes for a UserMan web interface.
+
+	Use this to add user management to your web application. See also
+	$(D UserManWebAuthenticator) for some complete examples of a simple
+	web service with UserMan integration.
+*/
+void registerUserManWebInterface(URLRouter router, UserManController controller)
+{
+	router.registerWebInterface(new UserManWebInterface(controller));
+}
+
+
+/**
+	Helper function to update the user profile from a POST request.
+
+	This assumes that the fields are named like they are in userman.profile.dt.
+	Session variables will be updated automatically.
+*/
+void updateProfile(UserManController controller, User user, HTTPServerRequest req)
+{
+	if (controller.settings.useUserNames) {
+		if (auto pv = "name" in req.form) user.fullName = *pv;
+		if (auto pv = "email" in req.form) user.email = *pv;
+	} else {
+		if (auto pv = "email" in req.form) user.email = user.name = *pv;
+	}
+	if (auto pv = "full_name" in req.form) user.fullName = *pv;
+
+	if (auto pv = "password" in req.form) {
+		enforce(user.auth.method == "password", "User account has no password authentication.");
+		auto pconf = "password_confirmation" in req.form;
+		enforce(pconf !is null, "Missing password confirmation.");
+		validatePassword(*pv, *pconf);
+		user.auth.passwordHash = generateSimplePasswordHash(*pv);
+	}
+
+	controller.updateUser(user);
+
+	req.session["userName"] = user.name;
+	req.session["userFullName"] = user.fullName;
+	req.session["userEmail"] = user.email;
+}
+
+
+/**
+	Used to privide request authentication for web applications.
+*/
+class UserManWebAuthenticator {
 	private {
 		UserManController m_controller;
 		string m_prefix;
 	}
-	
-	this(UserManController ctrl, string prefix = "/")
+
+	this(UserManController controller, string prefix = "/")
 	{
-		m_controller = ctrl;
+		m_controller = controller;
 		m_prefix = prefix;
 	}
-	
-	void register(URLRouter router)
-	{
-		router.get(m_prefix~"login", &showLogin);
-		router.post(m_prefix~"login", &login);
-		router.get(m_prefix~"logout", &logout);
-		router.get(m_prefix~"register", &showRegister);
-		router.post(m_prefix~"register", &register);
-		router.get(m_prefix~"resend_activation", &showResendActivation);
-		router.post(m_prefix~"resend_activation", &resendActivation);
-		router.get(m_prefix~"activate", &activate);
-		router.get(m_prefix~"forgot_login", &showForgotPassword);
-		router.post(m_prefix~"forgot_login", &sendPasswordReset);
-		router.get(m_prefix~"reset_password", &showResetPassword);
-		router.post(m_prefix~"reset_password", &resetPassword);
-		router.get(m_prefix~"profile", auth(&showProfile));
-		router.post(m_prefix~"profile", auth(&changeProfile));
-	}
-	
+
 	HTTPServerRequestDelegate auth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
-			if( !req.session ){
-				res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
-			} else {
-				auto usr = m_controller.getUserByName(req.session["userName"]);
+			if (auto usr = performAuth(req, res))
 				callback(req, res, usr);
-			}
 		}
 		
 		return &requestHandler;
@@ -65,6 +92,16 @@ class UserManWebInterface {
 	HTTPServerRequestDelegate auth(HTTPServerRequestDelegate callback)
 	{
 		return auth((req, res, user){ callback(req, res); });
+	}
+
+	User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+	{
+		if (!req.session) {
+			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
+			return null;
+		} else {
+			return m_controller.getUserByName(req.session["userName"]);
+		}
 	}
 	
 	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
@@ -78,228 +115,258 @@ class UserManWebInterface {
 		
 		return &requestHandler;
 	}
+}
 
-	void updateProfile(User user, HTTPServerRequest req)
-	{
-		if( m_controller.settings.useUserNames ){
-			if( auto pv = "name" in req.form ) user.fullName = *pv;
-			if( auto pv = "email" in req.form ) user.email = *pv;
-		} else {
-			if( auto pv = "email" in req.form ) user.email = user.name = *pv;
-		}
-		if( auto pv = "full_name" in req.form ) user.fullName = *pv;
+/** This example uses the $(D @before) annotation supported by the
+	$(D vibe.web.web) framework for a concise and statically defined
+	authentication approach.
+*/
+unittest {
+	import vibe.http.router;
+	import vibe.http.server;
+	import vibe.web.web;
 
-		if( auto pv = "password" in req.form ){
-			enforce(user.auth.method == "password", "User account has no password authentication.");
-			auto pconf = "password_confirmation" in req.form;
-			enforce(pconf !is null, "Missing password confirmation.");
-			validatePassword(*pv, *pconf);
-			user.auth.passwordHash = generateSimplePasswordHash(*pv);
+	class MyWebService {
+		private {
+			UserManWebAuthenticator m_auth;
 		}
 
-		m_controller.updateUser(user);
+		this(UserManController userman)
+		{
+			m_auth = new UserManWebAuthenticator(userman);
+		}
 
-		req.session["userFullName"] = user.fullName;
-		req.session["userEmail"] = user.email;
+		// this route can be accessed publicly (/)
+		void getIndex()
+		{
+			//render!"welcome.dt"
+		}
+
+		// the @authenticated attribute (defined below) ensures that this route
+		// (/private_page) can only ever be accessed when the user is logged in
+		@authenticated
+		void getPrivatePage(User _user)
+		{
+			// render a private page with some user specific information
+			//render!("private_page.dt", _user);
+		}
+
+		// Define a custom attribute for authenticated routes
+		private enum authenticated = before!performAuth("_user");
+		mixin PrivateAccessProxy; // needed so that performAuth can be private
+		// our custom authentication routine, could return any other type, too
+		private User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+		{
+			return m_auth.performAuth(req, res);
+		}
+	}
+
+	void registerMyService(URLRouter router, UserManController userman)
+	{
+		router.registerUserManWebInterface(userman);
+		router.registerWebInterface(new MyWebService(userman));
+	}
+}
+
+/** An example using a plain $(D vibe.http.router.URLRouter) based
+	authentication approach.
+*/
+unittest {
+	import std.functional; // toDelegate
+	import vibe.http.router;
+	import vibe.http.server;
+
+	void getIndex(HTTPServerRequest req, HTTPServerResponse res)
+	{
+		//render!"welcome.dt"
+	}
+
+	void getPrivatePage(HTTPServerRequest req, HTTPServerResponse res, User user)
+	{
+		// render a private page with some user specific information
+		//render!("private_page.dt", _user);
+	}
+
+	void registerMyService(URLRouter router, UserManController userman)
+	{
+		auto authenticator = new UserManWebAuthenticator(userman);
+		router.registerUserManWebInterface(userman);
+		router.get("/", &getIndex);
+		router.any("/private_page", authenticator.auth(toDelegate(&getPrivatePage)));
+	}
+}
+
+
+/** Web interface class for UserMan, suitable for use with $(D vibe.web.web).
+
+	The typical approach is to use $(D registerUserManWebInterface) instead of
+	directly using this class.
+*/
+class UserManWebInterface {
+	private {
+		UserManController m_controller;
+		UserManWebAuthenticator m_auth;
+		string m_prefix;
+		SessionVar!(string, "userEmail") m_sessUserEmail;
+		SessionVar!(string, "userName") m_sessUserName;
+		SessionVar!(string, "userFullName") m_sessUserFullName;
+		SessionVar!(string, "userID") m_sessUserID;
 	}
 	
-	protected void showLogin(HTTPServerRequest req, HTTPServerResponse res)
+	this(UserManController controller, string prefix = "/")
 	{
-		string error;
-		auto prdct = "redirect" in req.query;
-		string redirect = prdct ? *prdct : "";
-		res.renderCompat!("userman.login.dt",
-			HTTPServerRequest, "req",
-			string, "error",
-			string, "redirect",
-			UserManSettings, "settings")(req, error, redirect, m_controller.settings);
+		m_controller = controller;
+		m_auth = new UserManWebAuthenticator(controller);
+		m_prefix = prefix;
 	}
 	
-	protected void login(HTTPServerRequest req, HTTPServerResponse res)
+	void getLogin(string redirect = "", string _error = "")
 	{
-		auto username = req.form["name"];
-		auto password = req.form["password"];
-		auto prdct = "redirect" in req.form;
+		string error = _error;
+		auto settings = m_controller.settings;
+		render!("userman.login.dt", error, redirect, settings);
+	}
 
+	@errorDisplay!getLogin	
+	void postLogin(string name, string password, string redirect = "")
+	{
 		User user;
 		try {
-			user = m_controller.getUserByEmailOrName(username);
-			enforce(user.active, "The account is not yet activated.");
-			enforce(testSimplePasswordHash(user.auth.passwordHash, password),
-				"The password you entered is not correct.");
-			
-			auto session = req.session;
-			if (!session) session = res.startSession();
-			session["userEmail"] = user.email;
-			session["userName"] = user.name;
-			session["userFullName"] = user.fullName;
-			session["userID"] = user.id;
-			res.redirect(prdct ? *prdct : m_prefix);
-		} catch( Exception e ){
-			logDebug("Error logging in: %s", e.toString());
-			string error = e.msg;
-			string redirect = prdct ? *prdct : "";
-			res.renderCompat!("userman.login.dt",
-				HTTPServerRequest, "req",
-				string, "error",
-				string, "redirect",
-				UserManSettings, "settings")(req, error, redirect, m_controller.settings);
+			user = m_controller.getUserByEmailOrName(name);
+			enforce(testSimplePasswordHash(user.auth.passwordHash, password), "Wrong password.");
+		} catch (Exception e) {
+			logDebug("Error logging in: %s", e.toString().sanitize);
+			throw new Exception("Invalid user/email or password.");
 		}
+
+		enforce(user.active, "The account is not yet activated.");
+		
+		m_sessUserEmail = user.email;
+		m_sessUserName = user.name;
+		m_sessUserFullName = user.fullName;
+		m_sessUserID = user._id.toString();
+		.redirect(redirect.length ? redirect : m_prefix);
 	}
 	
-	protected void logout(HTTPServerRequest req, HTTPServerResponse res)
+	void getLogout(HTTPServerResponse res)
 	{
-		if( req.session ){
-			res.terminateSession();
-			req.session = Session.init;
-		}
+		terminateSession();
 		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl.toString();
-		res.renderCompat!("userman.logout.dt",
-			HTTPServerRequest, "req")(req);
+		render!("userman.logout.dt");
 	}
 
-	protected void showRegister(HTTPServerRequest req, HTTPServerResponse res)
+	void getRegister(string _error = "")
 	{
-		string error;
-		res.renderCompat!("userman.register.dt",
-			HTTPServerRequest, "req",
-			string, "error",
-			UserManSettings, "settings")(req, error, m_controller.settings);
+		string error = _error;
+		auto settings = m_controller.settings;
+		render!("userman.register.dt", error, settings);
 	}
 	
-	protected void register(HTTPServerRequest req, HTTPServerResponse res)
+	@errorDisplay!getRegister
+	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
-		string error;
-		try {
-			auto email = validateEmail(req.form["email"]);
-			if (!m_controller.settings.useUserNames) req.form["name"] = email;
-			else validateUserName(req.form["name"]);
-			auto name = req.form["name"];
-			auto fullname = req.form["fullName"];
-			auto password = validatePassword(req.form["password"], req.form["passwordConfirmation"]);
-			m_controller.registerUser(email, name, fullname, password);
+		string username;
+		if (m_controller.settings.useUserNames) {
+			enforce(!name.isNull(), "Missing user name field.");
+			username = name;
+		} else username = email;
 
-			if( m_controller.settings.requireAccountValidation ){
-				res.renderCompat!("userman.register_activate.dt",
-					HTTPServerRequest, "req",
-					string, "error")(req, error);
-			} else {
-				login(req, res);
-			}
-		} catch( Exception e ){
-			error = e.msg;
-			res.renderCompat!("userman.register.dt",
-				HTTPServerRequest, "req",
-				string, "error",
-				UserManSettings, "settings")(req, error, m_controller.settings);
+		m_controller.registerUser(email, username, fullName, password);
+
+		if (m_controller.settings.requireAccountValidation) {
+			string error;
+			render!("userman.register_activate.dt", error);
+		} else {
+			postLogin(name, password);
 		}
 	}
 	
-	protected void showResendActivation(HTTPServerRequest req, HTTPServerResponse res)
+	void getResendActivation(string _error = "")
 	{
-		string error = req.params.get("error", null);
-		res.renderCompat!("userman.resend_activation.dt",
-			HTTPServerRequest, "req",
-			string, "error")(req, error);
+		string error = _error;
+		render!("userman.resend_activation.dt", error);
 	}
 
-	protected void resendActivation(HTTPServerRequest req, HTTPServerResponse res)
+	@errorDisplay!getResendActivation
+	void postResendActivation(ValidEmail email)
 	{
 		try {
-			m_controller.resendActivation(req.form["email"]);
-			res.renderCompat!("userman.resend_activation_done.dt",
-				HTTPServerRequest, "req")(req);
-		} catch( Exception e ){
-			string error = "Failed to send activation mail. Please try again later.";
-			error ~= e.toString();
-			res.renderCompat!("userman.resend_activation.dt",
-				HTTPServerRequest, "req",
-				string, "error")(req, error);
+			m_controller.resendActivation(email);
+			render!("userman.resend_activation_done.dt");
+		} catch (Exception e) {
+			logDebug("Error sending activation mail: %s", e.toString().sanitize);
+			throw new Exception("Failed to send activation mail. Please try again later. ("~e.msg~").");
 		}
 	}
 
-	protected void activate(HTTPServerRequest req, HTTPServerResponse res)
+	void getActivate(ValidEmail email, string code)
 	{
-		auto email = req.query["email"];
-		auto code = req.query["code"];
 		m_controller.activateUser(email, code);
 		auto user = m_controller.getUserByEmail(email);
-		auto session = req.session;
-		if (!session) session = res.startSession();
-		session["userEmail"] = user.email;
-		session["userName"] = user.name;
-		session["userFullName"] = user.fullName;
-		res.renderCompat!("userman.activate.dt",
-			HTTPServerRequest, "req")(req);
+		m_sessUserEmail = user.email;
+		m_sessUserName = user.name;
+		m_sessUserFullName = user.fullName;
+		m_sessUserID = user._id.toString();
+		render!("userman.activate.dt");
 	}
 	
-	protected void showForgotPassword(HTTPServerRequest req, HTTPServerResponse res)
+	void getForgotLogin(string _error = "")
 	{
-		string error = req.params.get("error", null);
-		res.renderCompat!("userman.forgot_login.dt",
-			HTTPServerRequest, "req",
-			string, "error")(req, error);
+		auto error = _error;
+		render!("userman.forgot_login.dt", error);
 	}
 
-	protected void sendPasswordReset(HTTPServerRequest req, HTTPServerResponse res)
+	@errorDisplay!getForgotLogin
+	void postForgotLogin(ValidEmail email)
 	{
 		try {
-			m_controller.requestPasswordReset(req.form["email"]);
-		} catch(Exception e){
-			req.params["error"] = e.msg;
-			showForgotPassword(req, res);
-			return;
+			m_controller.requestPasswordReset(email);
+		} catch(Exception e) {
+			// ignore errors, so that registered e-mails cannot be determined
+			logDiagnostic("Failed to send password reset mail to %s: %s", email, e.msg);
 		}
 
-		res.renderCompat!("userman.forgot_login_sent.dt",
-			HTTPServerRequest, "req")(req);
+		render!("userman.forgot_login_sent.dt");
 	}
 
-	protected void showResetPassword(HTTPServerRequest req, HTTPServerResponse res)
+	void getResetPassword(string _error = "")
 	{
-		string error = req.params.get("error", null);
-		res.renderCompat!("userman.reset_password.dt",
-			HTTPServerRequest, "req",
-			string, "error")(req, error);
+		string error = _error;
+		render!("userman.reset_password.dt", error);
 	}
 
-	protected void resetPassword(HTTPServerRequest req, HTTPServerResponse res)
+	@errorDisplay!getResetPassword
+	void postResetPassword(ValidEmail email, string code, ValidPassword password, Confirm!"password" password_confirmation, HTTPServerResponse res)
 	{
-		try {
-			auto password = req.form["password"];
-			auto password_conf = req.form["password_confirmation"];
-			validatePassword(password, password_conf);
-			m_controller.resetPassword(req.form["email"], req.form["code"], password);
-		} catch(Exception e){
-			req.params["error"] = e.msg;
-			showResetPassword(req, res);
-			return;
-		}
-
+		m_controller.resetPassword(email, code, password);
 		res.headers["Refresh"] = "3; url=" ~ m_controller.settings.serviceUrl.toString();
-		res.renderCompat!("userman.reset_password_done.dt",
-			HTTPServerRequest, "req")(req);
+		render!("userman.reset_password_done.dt");
 	}
 
-	protected void showProfile(HTTPServerRequest req, HTTPServerResponse res, User user)
+	@auth
+	void getProfile(HTTPServerRequest req, User _user, string _error = "")
 	{
-		string error = req.params.get("error", null);
-		req.form["full_name"] = user.fullName;
-		req.form["email"] = user.email;
-		res.renderCompat!("userman.profile.dt",
-			HTTPServerRequest, "req",
-			User, "user",
-			string, "error")(req, user, error);
+		req.form["full_name"] = _user.fullName;
+		req.form["email"] = _user.email;
+		bool useUserNames = m_controller.settings.useUserNames;
+		auto user = _user;
+		string error = _error;
+		render!("userman.profile.dt", user, useUserNames, error);
 	}
 	
-	protected void changeProfile(HTTPServerRequest req, HTTPServerResponse res, User user)
+	@auth @errorDisplay!getProfile
+	void postProfile(HTTPServerRequest req, User _user)
 	{
-		try {
-			updateProfile(user, req);
-			res.redirect(m_prefix);
-		} catch( Exception e ){
-			req.params["error"] = e.msg;
-			showProfile(req, res, user);
-		}
+		updateProfile(m_controller, _user, req);
+		redirect(m_prefix);
+	}
+
+	// Attribute for authenticated routes
+	private enum auth = before!performAuth("_user");
+	mixin PrivateAccessProxy;
+
+	private User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+	{
+		return m_auth.performAuth(req, res);
 	}
 }
