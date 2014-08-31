@@ -45,7 +45,7 @@ class UserManController {
 		validateEmail(usr.email);
 	}
 	
-	abstract void addUser(User usr);
+	abstract User.ID addUser(User usr);
 
 	User.ID registerUser(string email, string name, string full_name, string password)
 	{
@@ -74,7 +74,7 @@ class UserManController {
 		return user.id;
 	}
 
-	User.ID inviteUser(string email, string full_name, string message)
+	User.ID inviteUser(string email, string full_name, string message, bool send_mail = true)
 	{
 		email = email.toLower();
 
@@ -209,6 +209,10 @@ class UserManController {
 	abstract void deleteUser(User.ID user_id);
 
 	abstract void updateUser(User user);
+	abstract void setEmail(User.ID user, string email);
+	abstract void setFullName(User.ID user, string full_name);
+	abstract void setPassword(User.ID user, string password);
+	abstract void setProperty(User.ID user, string name, string value);
 
 	abstract void addGroup(string name, string description);
 }

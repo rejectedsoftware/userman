@@ -43,7 +43,7 @@ class MongoUserManController : UserManController {
 		return !bu.isNull() && bu.auth.method.get!string.length > 0;
 	}
 	
-	override void addUser(User usr)
+	override User.ID addUser(User usr)
 	{
 		validateUser(usr);
 		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
@@ -51,6 +51,8 @@ class MongoUserManController : UserManController {
 		
 		usr.id = User.ID(BsonObjectID.generate());
 		m_users.insert(usr);
+
+		return usr.id;
 	}
 
 	override User getUser(User.ID id)
@@ -116,8 +118,31 @@ class MongoUserManController : UserManController {
 	{
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
+		// FIXME: enforce that no user names or emails are used twice!
 
 		m_users.update(["_id": user.id.bsonObjectIDValue], user);
+	}
+
+	override void setEmail(User.ID user, string email)
+	{
+		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["email": email]]);
+	}
+
+	override void setFullName(User.ID user, string full_name)
+	{
+		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["fullName": full_name]]);
+	}
+
+	override void setPassword(User.ID user, string password)
+	{
+		import vibe.crypto.passwordhash;
+		m_users.update(["_id": user.bsonObjectIDValue], ["$set":
+			["auth.method": "password", "auth.passwordHash": generateSimplePasswordHash(password)]]);
+	}
+
+	override void setProperty(User.ID user, string name, string value)
+	{
+		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}
 	
 	override void addGroup(string name, string description)

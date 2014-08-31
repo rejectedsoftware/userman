@@ -61,7 +61,7 @@ class RedisUserManController : UserManController {
 		return false;
 	}
 	
-	override void addUser(User usr)
+	override User.ID addUser(User usr)
 	{
 		validateUser(usr);
 
@@ -97,6 +97,8 @@ class RedisUserManController : UserManController {
 
 		foreach(string group; usr.groups)
 			m_redisDB.sadd("userman:group:" ~ group ~ ":members", userId);
+
+		return usr.id;
 	}
 
 	override User getUser(User.ID id)
@@ -272,6 +274,26 @@ class RedisUserManController : UserManController {
 			else
 				m_redisDB.srem("userman:group:" ~ name ~ ":members", user.id);
 		}
+	}
+	
+	override void setEmail(User.ID user, string email)
+	{
+		assert(false);
+	}
+
+	override void setFullName(User.ID user, string full_name)
+	{
+		assert(false);
+	}
+	
+	override void setPassword(User.ID user, string password)
+	{
+		assert(false);
+	}
+	
+	override void setProperty(User.ID user, string name, string value)
+	{
+		assert(false);
 	}
 	
 	override void addGroup(string name, string description)
