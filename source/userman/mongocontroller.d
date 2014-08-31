@@ -1,7 +1,7 @@
 /**
 	Database abstraction layer
 
-	Copyright: © 2012 RejectedSoftware e.K.
+	Copyright: © 2012-2014 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -14,7 +14,7 @@ import vibe.db.mongo.mongo;
 import std.string;
 
 
-class MongoController : UserManController {
+class MongoUserManController : UserManController {
 	private {
 		MongoCollection m_users;
 		MongoCollection m_groups;

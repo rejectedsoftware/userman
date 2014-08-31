@@ -1,9 +1,9 @@
 /**
 	Database abstraction layer
 
-	Copyright: © 2012 RejectedSoftware e.K.
+	Copyright: © 2012-2014 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
-	Authors: Sönke Ludwig
+	Authors: David Suppiger
 */
 module userman.rediscontroller;
 
@@ -17,7 +17,7 @@ import std.string;
 import std.conv;
 
 
-class RedisController : UserManController {
+class RedisUserManController : UserManController {
 	private {
 		RedisClient m_redisClient;
 		RedisDatabase m_redisDB;
