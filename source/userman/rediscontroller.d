@@ -69,7 +69,7 @@ class RedisController : UserManController {
 		enforce(m_redisDB.get!string("userman:email_user:" ~ usr.email) == string.init, "The email address is already in use.");
 
 		long userId = m_redisDB.incr("userman:nextUserId");
-		usr.id = to!string(userId);
+		usr.id = User.ID(userId);
 
 		// Indexes
 		m_redisDB.zadd("userman:users", userId, userId);
@@ -99,7 +99,7 @@ class RedisController : UserManController {
 			m_redisDB.sadd("userman:group:" ~ group ~ ":members", userId);
 	}
 
-	override User getUser(string id)
+	override User getUser(User.ID id)
 	{
 		auto userHash = m_redisDB.hgetAll("userman:user:" ~ id);
 		enforce(userHash.hasNext(), "The specified user id is invalid.");
@@ -147,13 +147,15 @@ class RedisController : UserManController {
 			ret.auth = auth;
 		}
 
-		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1);
+		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1, true);
 		while (groupNames.hasNext()) {
-			string name = groupNames.next!string();
-			if (m_redisDB.sisMember("userman:group:" ~ name ~ ":members", id))
+			import std.math;
+			string gname = groupNames.next!string();
+			auto gid = rndtol(groupNames.next!string().to!double);
+			if (m_redisDB.sisMember("userman:group:" ~ gname ~ ":members", id))
 			{
 				++ret.groups.length;
-				ret.groups[ret.groups.length - 1] = name;
+				ret.groups[ret.groups.length - 1] = Group.ID(gid);
 			}
 		}
 
@@ -164,7 +166,7 @@ class RedisController : UserManController {
 	{
 		name = name.toLower();
 
-		string userId = m_redisDB.get!string("userman:name_user:" ~ name);
+		User.ID userId = m_redisDB.get!string("userman:name_user:" ~ name).to!long;
 		try {
 			return getUser(userId);
 		}
@@ -177,7 +179,7 @@ class RedisController : UserManController {
 	{
 		email = email.toLower();
 
-		string userId = m_redisDB.get!string("userman:email_user:" ~ email);
+		User.ID userId = m_redisDB.get!string("userman:email_user:" ~ email).to!long;
 		try {
 			return getUser(userId);
 		}
@@ -193,7 +195,7 @@ class RedisController : UserManController {
 			userId = m_redisDB.get!string("userman:name_user:" ~ email_or_name);
 
 		try {
-			return getUser(userId);
+			return getUser(User.ID(userId.to!long));
 		}
 		catch (Exception e) {
 			throw new Exception("The specified email address or user name is not registered.");
@@ -204,7 +206,7 @@ class RedisController : UserManController {
 	{
 		auto userIds = m_redisDB.zrange("userman:users", first_user, first_user + max_count);
 		while (userIds.hasNext()) {
-			auto usr = getUser(userIds.next!string());
+			auto usr = getUser(User.ID(userIds.next!string().to!long));
 			del(usr);
 		}
 	}
@@ -214,7 +216,7 @@ class RedisController : UserManController {
 		return m_redisDB.zcard("userman:users");
 	}
 
-	override void deleteUser(string user_id)
+	override void deleteUser(User.ID user_id)
 	{
 		User usr = getUser(user_id);
 

@@ -49,13 +49,13 @@ class MongoController : UserManController {
 		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
 		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
 		
-		usr.id = BsonObjectID.generate().toString();
+		usr.id = User.ID(BsonObjectID.generate());
 		m_users.insert(usr);
 	}
 
-	override User getUser(string id)
+	override User getUser(User.ID id)
 	{
-		auto busr = m_users.findOne(["_id": BsonObjectID.fromString(id)]);
+		auto busr = m_users.findOne(["_id": id.bsonObjectIDValue	]);
 		enforce(!busr.isNull(), "The specified user id is invalid.");
 		auto ret = new User;
 		deserializeBson(ret, busr);
@@ -107,9 +107,9 @@ class MongoController : UserManController {
 		return m_users.count(Bson.emptyObject);
 	}
 
-	override void deleteUser(string user_id)
+	override void deleteUser(User.ID user_id)
 	{
-		m_users.remove(["_id": BsonObjectID.fromString(user_id)]);
+		m_users.remove(["_id": user_id.bsonObjectIDValue]);
 	}
 
 	override void updateUser(User user)
@@ -117,14 +117,14 @@ class MongoController : UserManController {
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
-		m_users.update(["_id": user.id], user);
+		m_users.update(["_id": user.id.bsonObjectIDValue], user);
 	}
 	
 	override void addGroup(string name, string description)
 	{
 		enforce(m_groups.findOne(["name": name]).isNull(), "A group with this name already exists.");
 		auto grp = new Group;
-		grp.id = BsonObjectID.generate().toString();
+		grp.id = Group.ID(BsonObjectID.generate());
 		grp.name = name;
 		grp.description = description;
 		m_groups.insert(grp);

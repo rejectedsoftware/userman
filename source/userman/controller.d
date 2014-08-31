@@ -47,7 +47,7 @@ class UserManController {
 	
 	abstract void addUser(User usr);
 
-	string registerUser(string email, string name, string full_name, string password)
+	User.ID registerUser(string email, string name, string full_name, string password)
 	{
 		email = email.toLower();
 		name = name.toLower();
@@ -74,7 +74,7 @@ class UserManController {
 		return user.id;
 	}
 
-	string inviteUser(string email, string full_name, string message)
+	User.ID inviteUser(string email, string full_name, string message)
 	{
 		email = email.toLower();
 
@@ -194,7 +194,7 @@ class UserManController {
 		updateUser(usr);
 	}
 
-	abstract User getUser(string id);
+	abstract User getUser(User.ID id);
 
 	abstract User getUserByName(string name);
 
@@ -206,7 +206,7 @@ class UserManController {
 
 	abstract long getUserCount();
 
-	abstract void deleteUser(string user_id);
+	abstract void deleteUser(User.ID user_id);
 
 	abstract void updateUser(User user);
 
@@ -214,13 +214,14 @@ class UserManController {
 }
 
 class User {
-	string id;
+	alias .ID!User ID;
+	ID id;
 	bool active;
 	bool banned;
 	string name;
 	string fullName;
 	string email;
-	string[] groups;
+	Group.ID[] groups;
 	string activationCode;
 	string resetCode;
 	SysTime resetCodeExpireTime;
@@ -230,7 +231,7 @@ class User {
 	Bson toBson() const
 	{
 		Bson[string] props;
-		props["_id"] = BsonObjectID.fromString(id);
+		props["_id"] = id.bsonObjectIDValue();
 		props["active"] = Bson(active);
 		props["banned"] = Bson(banned);
 		props["name"] = Bson(name);
@@ -249,13 +250,13 @@ class User {
 	static User fromBson(Bson src)
 	{
 		auto usr = new User;
-		usr.id = src["_id"].get!BsonObjectID().toString();
+		usr.id = User.ID(src["_id"].get!BsonObjectID());
 		usr.active = src["active"].get!bool;
 		usr.banned = src["banned"].get!bool;
 		usr.name = src["name"].get!string;
 		usr.fullName = src["fullName"].get!string;
 		usr.email = src["email"].get!string;
-		usr.groups = deserializeBson!(string[])(src["groups"]);
+		usr.groups = deserializeBson!(Group.ID[])(src["groups"]);
 		usr.activationCode = src["activationCode"].get!string;
 		usr.resetCode = src["resetCode"].get!string;
 		usr.resetCodeExpireTime = src["resetCodeExpireTime"].get!BsonDate().toSysTime();
@@ -277,16 +278,17 @@ struct AuthInfo {
 }
 
 class Group {
-	string id;
+	alias .ID!Group ID;
+	ID id;
 	string name;
 	string description;
 
 	Bson toBson() const
 	{
 		Bson[string] props;
-		props["_id"] = Bson(BsonObjectID.fromString(id));
-		props["name"] = Bson(name);
-		props["description"] = Bson(description);
+		props["_id"] = id.bsonObjectIDValue();
+		props["name"] = name;
+		props["description"] = description;
 
 		return Bson(props);
 	}
@@ -294,13 +296,77 @@ class Group {
 	static Group fromBson(Bson src)
 	{
 		auto grp = new Group;
-		grp.id = src["_id"].get!BsonObjectID().toString();
+		grp.id = Group.ID(src["_id"].get!BsonObjectID());
 		grp.name = src["name"].get!string;
 		grp.description = src["description"].get!string;
 		
 		return grp;
 	}
 }
+
+struct ID(KIND)
+{
+	import std.conv;
+
+	alias Kind = KIND;
+
+	private {
+		union {
+			long m_long;
+			BsonObjectID m_bsonObjectID;
+		}
+		IDType m_type;
+	}
+
+	alias toString this;
+
+	this(long id) { this = id; }
+	this(BsonObjectID id) { this = id; }
+
+	@property BsonObjectID bsonObjectIDValue() const { assert(m_type == IDType.bsonObjectID); return m_bsonObjectID; }
+	@property long longValue() const { assert(m_type == IDType.long_); return m_long; }
+
+	void opAssign(long id) { m_type = IDType.long_; m_long = id; }
+	void opAssign(BsonObjectID id) { m_type = IDType.bsonObjectID; m_bsonObjectID = id; }
+	void opAssign(ID id)
+	{
+		final switch (id.m_type) {
+			case IDType.long_: this = id.m_long; break;
+			case IDType.bsonObjectID: this = id.m_bsonObjectID; break;
+		}
+	}
+
+	static ID fromBson(Bson id) { return ID(id.get!BsonObjectID); }
+	Bson toBson() const { assert(m_type == IDType.bsonObjectID); return Bson(m_bsonObjectID); }
+
+	static ID fromLong(long id) { return ID(id); }
+	long toLong() const { assert(m_type == IDType.long_); return m_long; }
+
+	static ID fromString(string str)
+	{
+		if (str.length == 24) return ID(BsonObjectID.fromString(str));
+		else return ID(str.to!long);
+	}
+
+	string toString()
+	const {
+		final switch (m_type) {
+			case IDType.long_: return m_long.to!string;
+			case IDType.bsonObjectID: return m_bsonObjectID.toString();
+		}
+	}
+}
+
+static assert(isBsonSerializable!(ID!void));
+unittest {
+	assert(serializeToBson(ID!void(BsonObjectID.init)).type == Bson.Type.objectID);
+}
+
+enum IDType {
+	long_,
+	bsonObjectID
+}
+		
 
 string generateActivationCode()
 {
