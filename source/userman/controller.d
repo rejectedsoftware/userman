@@ -231,7 +231,7 @@ struct User {
 	string resetCode;
 	SysTime resetCodeExpireTime;
 	AuthInfo auth;
-	Bson[string] properties;
+	Json[string] properties;
 
 	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
 }
@@ -249,6 +249,7 @@ struct Group {
 	@(.name("_id")) ID id;
 	string name;
 	string description;
+	@optional Json[string] properties;
 }
 
 struct ID(KIND)
