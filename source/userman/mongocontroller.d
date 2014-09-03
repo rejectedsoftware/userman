@@ -43,7 +43,7 @@ class MongoUserManController : UserManController {
 		return !bu.isNull() && bu.auth.method.get!string.length > 0;
 	}
 	
-	override User.ID addUser(User usr)
+	override User.ID addUser(ref User usr)
 	{
 		validateUser(usr);
 		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
@@ -57,49 +57,38 @@ class MongoUserManController : UserManController {
 
 	override User getUser(User.ID id)
 	{
-		auto busr = m_users.findOne(["_id": id.bsonObjectIDValue	]);
-		enforce(!busr.isNull(), "The specified user id is invalid.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
+		auto usr = m_users.findOne!User(["_id": id.bsonObjectIDValue	]);
+		enforce(!usr.isNull(), "The specified user id is invalid.");
+		return usr;
 	}
 
 	override User getUserByName(string name)
 	{
 		name = name.toLower();
-
-		auto busr = m_users.findOne(["name": name]);
-		enforce(!busr.isNull(), "The specified user name is not registered.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
+		auto usr = m_users.findOne!User(["name": name]);
+		enforce(!usr.isNull(), "The specified user name is not registered.");
+		return usr;
 	}
 
 	override User getUserByEmail(string email)
 	{
 		email = email.toLower();
-
-		auto busr = m_users.findOne(["email": email]);
-		enforce(!busr.isNull(), "There is no user account for the specified email address.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
+		auto usr = m_users.findOne!User(["email": email]);
+		enforce(!usr.isNull(), "There is no user account for the specified email address.");
+		return usr;
 	}
 
 	override User getUserByEmailOrName(string email_or_name)
 	{
-		auto busr = m_users.findOne(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
-		enforce(!busr.isNull(), "The specified email address or user name is not registered.");
-		auto ret = new User;
-		deserializeBson(ret, busr);
-		return ret;
+		auto usr = m_users.findOne!User(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
+		enforce(!usr.isNull(), "The specified email address or user name is not registered.");
+		return usr;
 	}
 
 	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
 	{
-		foreach( busr; m_users.find(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count) ){
+		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count)) {
 			if (max_count-- <= 0) break;
-			auto usr = deserializeBson!User(busr);
 			del(usr);
 		}
 	}
@@ -114,7 +103,7 @@ class MongoUserManController : UserManController {
 		m_users.remove(["_id": user_id.bsonObjectIDValue]);
 	}
 
-	override void updateUser(User user)
+	override void updateUser(in ref User user)
 	{
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");

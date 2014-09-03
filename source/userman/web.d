@@ -83,8 +83,11 @@ class UserManWebAuthenticator {
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
-			if (auto usr = performAuth(req, res))
-				callback(req, res, usr);
+			User usr;
+			try usr = performAuth(req, res);
+			catch (Exception e) throw new HTTPStatusException(HTTPStatus.unauthorized);
+			if (res.headerWritten) return;
+			callback(req, res, usr);
 		}
 		
 		return &requestHandler;
@@ -98,7 +101,7 @@ class UserManWebAuthenticator {
 	{
 		if (!req.session) {
 			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
-			return null;
+			return User.init;
 		} else {
 			return m_controller.getUserByName(req.session["userName"]);
 		}

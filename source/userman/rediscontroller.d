@@ -61,7 +61,7 @@ class RedisUserManController : UserManController {
 		return false;
 	}
 	
-	override User.ID addUser(User usr)
+	override User.ID addUser(ref User usr)
 	{
 		validateUser(usr);
 
@@ -106,7 +106,7 @@ class RedisUserManController : UserManController {
 		auto userHash = m_redisDB.hgetAll("userman:user:" ~ id);
 		enforce(userHash.hasNext(), "The specified user id is invalid.");
 
-		auto ret = new User;
+		User ret;
 
 		ret.id = id;
 		while (userHash.hasNext()) {
@@ -222,26 +222,23 @@ class RedisUserManController : UserManController {
 	{
 		User usr = getUser(user_id);
 
-		if (usr !is null)
-		{
-			// Indexes
-			m_redisDB.zrem("userman:users", user_id);
-			m_redisDB.del("userman:email_user:" ~ usr.email);
-			m_redisDB.del("userman:name_user:" ~ usr.name);
+		// Indexes
+		m_redisDB.zrem("userman:users", user_id);
+		m_redisDB.del("userman:email_user:" ~ usr.email);
+		m_redisDB.del("userman:name_user:" ~ usr.name);
 
-			// User
-			m_redisDB.del(format("userman:user:%s", user_id));
+		// User
+		m_redisDB.del(format("userman:user:%s", user_id));
 
-			// Credentials
-			m_redisDB.del(format("userman:user:%s:auth", user_id));
+		// Credentials
+		m_redisDB.del(format("userman:user:%s:auth", user_id));
 
-			// Group membership
-			foreach(string group; usr.groups)
-				m_redisDB.srem("userman:group:" ~ group ~ ":members", user_id);
-		}
+		// Group membership
+		foreach(string group; usr.groups)
+			m_redisDB.srem("userman:group:" ~ group ~ ":members", user_id);
 	}
 
-	override void updateUser(User user)
+	override void updateUser(in ref User user)
 	{
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");

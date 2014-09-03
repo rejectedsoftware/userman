@@ -10,6 +10,7 @@ module userman.controller;
 public import userman.userman;
 
 import vibe.crypto.passwordhash;
+import vibe.data.serialization;
 import vibe.db.mongo.mongo;
 import vibe.http.router;
 import vibe.mail.smtp;
@@ -39,13 +40,13 @@ class UserManController {
 
 	abstract bool isEmailRegistered(string email);
 
-	void validateUser(User usr)
+	void validateUser(in ref User usr)
 	{
 		enforce(usr.name.length > 3, "User names must be at least 3 characters.");
 		validateEmail(usr.email);
 	}
 	
-	abstract User.ID addUser(User usr);
+	abstract User.ID addUser(ref User usr);
 
 	User.ID registerUser(string email, string name, string full_name, string password)
 	{
@@ -56,7 +57,7 @@ class UserManController {
 		validatePassword(password, password);
 
 		auto need_activation = m_settings.requireAccountValidation;
-		auto user = new User;
+		User user;
 		user.active = !need_activation;
 		user.name = name;
 		user.fullName = full_name;
@@ -84,7 +85,7 @@ class UserManController {
 			return getUserByEmail(email).id;
 		}
 		catch (Exception e) {
-			auto user = new User;
+			User user;
 			user.email = email;
 			user.name = email;
 			user.fullName = full_name;
@@ -208,7 +209,7 @@ class UserManController {
 
 	abstract void deleteUser(User.ID user_id);
 
-	abstract void updateUser(User user);
+	abstract void updateUser(in ref User user);
 	abstract void setEmail(User.ID user, string email);
 	abstract void setFullName(User.ID user, string full_name);
 	abstract void setPassword(User.ID user, string password);
@@ -217,9 +218,9 @@ class UserManController {
 	abstract void addGroup(string name, string description);
 }
 
-class User {
+struct User {
 	alias .ID!User ID;
-	ID id;
+	@(.name("_id")) ID id;
 	bool active;
 	bool banned;
 	string name;
@@ -231,44 +232,6 @@ class User {
 	SysTime resetCodeExpireTime;
 	AuthInfo auth;
 	Bson[string] properties;
-	
-	Bson toBson() const
-	{
-		Bson[string] props;
-		props["_id"] = id.bsonObjectIDValue();
-		props["active"] = Bson(active);
-		props["banned"] = Bson(banned);
-		props["name"] = Bson(name);
-		props["fullName"] = Bson(fullName);
-		props["email"] = Bson(email);
-		props["groups"] = serializeToBson(groups);
-		props["activationCode"] = Bson(activationCode);
-		props["resetCode"] = Bson(resetCode);
-		props["resetCodeExpireTime"] = BsonDate(resetCodeExpireTime);
-		props["auth"] = serializeToBson(auth);
-		props["properties"] = serializeToBson(properties);
-
-		return Bson(props);
-	}
-
-	static User fromBson(Bson src)
-	{
-		auto usr = new User;
-		usr.id = User.ID(src["_id"].get!BsonObjectID());
-		usr.active = src["active"].get!bool;
-		usr.banned = src["banned"].get!bool;
-		usr.name = src["name"].get!string;
-		usr.fullName = src["fullName"].get!string;
-		usr.email = src["email"].get!string;
-		usr.groups = deserializeBson!(Group.ID[])(src["groups"]);
-		usr.activationCode = src["activationCode"].get!string;
-		usr.resetCode = src["resetCode"].get!string;
-		usr.resetCodeExpireTime = src["resetCodeExpireTime"].get!BsonDate().toSysTime();
-		usr.auth = deserializeBson!AuthInfo(src["auth"]);
-		usr.properties = deserializeBson!(Bson[string])(src["properties"]);
-
-		return usr;
-	}
 
 	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
 }
@@ -281,31 +244,11 @@ struct AuthInfo {
 	string info;
 }
 
-class Group {
+struct Group {
 	alias .ID!Group ID;
-	ID id;
+	@(.name("_id")) ID id;
 	string name;
 	string description;
-
-	Bson toBson() const
-	{
-		Bson[string] props;
-		props["_id"] = id.bsonObjectIDValue();
-		props["name"] = name;
-		props["description"] = description;
-
-		return Bson(props);
-	}
-
-	static Group fromBson(Bson src)
-	{
-		auto grp = new Group;
-		grp.id = Group.ID(src["_id"].get!BsonObjectID());
-		grp.name = src["name"].get!string;
-		grp.description = src["description"].get!string;
-		
-		return grp;
-	}
 }
 
 struct ID(KIND)
