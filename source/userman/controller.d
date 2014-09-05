@@ -233,7 +233,7 @@ struct User {
 	AuthInfo auth;
 	Bson[string] properties;
 
-	bool isInGroup(string name) const { return groups.countUntil(name) >= 0; }
+	bool isInGroup(Group.ID group) const { return groups.countUntil(group) >= 0; }
 }
 
 struct AuthInfo {

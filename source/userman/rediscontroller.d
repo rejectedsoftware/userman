@@ -10,6 +10,7 @@ module userman.rediscontroller;
 import userman.controller;
 
 import vibe.db.redis.redis;
+import vibe.db.redis.idioms;
 
 import std.datetime;
 import std.exception;
@@ -21,6 +22,9 @@ class RedisUserManController : UserManController {
 	private {
 		RedisClient m_redisClient;
 		RedisDatabase m_redisDB;
+
+		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
+		RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging) m_groups;
 	}
 	
 	this(UserManSettings settings)
@@ -49,13 +53,16 @@ class RedisUserManController : UserManController {
 
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
+
+		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
+		m_groups = RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
 	}
 
 	override bool isEmailRegistered(string email)
 	{
-		string userId = m_redisDB.get!string("userman:email_user:" ~ email);
-		if (userId != string.init){
-			string method = m_redisDB.hget!string(format("userman:user:%s:auth"), "method");
+		long userId = m_redisDB.get!long("userman:email_user:" ~ email);
+		if (userId >= 0){
+			string method = m_authInfos[userId].method;
 			return method != string.init && method.length > 0;
 		}
 		return false;
@@ -68,11 +75,11 @@ class RedisUserManController : UserManController {
 		enforce(m_redisDB.get!string("userman:name_user:" ~ usr.name) == string.init, "The user name is already taken.");
 		enforce(m_redisDB.get!string("userman:email_user:" ~ usr.email) == string.init, "The email address is already in use.");
 
-		long userId = m_redisDB.incr("userman:nextUserId");
+		long userId = m_redisDB.incr("userman:user:max");
+		m_redisDB.zadd("userman:user:all", userId, userId);
 		usr.id = User.ID(userId);
 
 		// Indexes
-		m_redisDB.zadd("userman:users", userId, userId);
 		if (usr.email != string.init) m_redisDB.set("userman:email_user:" ~ usr.email, to!string(userId));
 		if (usr.name != string.init) m_redisDB.set("userman:name_user:" ~ usr.name, to!string(userId));
 
@@ -88,15 +95,10 @@ class RedisUserManController : UserManController {
 						"resetCodeExpireTime", usr.resetCodeExpireTime == SysTime() ? "" : usr.resetCodeExpireTime.toISOExtString());
 
 		// Credentials
-		m_redisDB.hmset(format("userman:user:%s:auth", userId),
-						"method", usr.auth.method,
-						"passwordHash", usr.auth.passwordHash,
-						"token", usr.auth.token,
-						"secret", usr.auth.secret,
-						"info", usr.auth.info);
+		m_authInfos[userId] = usr.auth;
 
-		foreach(string group; usr.groups)
-			m_redisDB.sadd("userman:group:" ~ group ~ ":members", userId);
+		foreach(Group.ID gid; usr.groups)
+			m_redisDB.sadd("userman:group:" ~ gid ~ ":members", userId);
 
 		return usr.id;
 	}
@@ -130,34 +132,13 @@ class RedisUserManController : UserManController {
 		 	}
 		}
 
-		auto authHash = m_redisDB.hgetAll(format("userman:user:%s:auth", id));
-		if(authHash.hasNext()) {
-			AuthInfo auth;
-			while (authHash.hasNext()) {
-		 		string key = authHash.next!string();
-		 		string value = authHash.next!string();
-				switch (key)
-				{
-					case "method": auth.method = value; break;
-					case "passwordHash": auth.passwordHash = value; break;
-					case "token": auth.token = value; break;
-					case "secret": auth.secret = value; break;
-					case "info": auth.info = value; break;
-		 			default: break;
-				}
-			}
-			ret.auth = auth;
-		}
+		ret.auth = m_authInfos[id.longValue];
 
-		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1, true);
-		while (groupNames.hasNext()) {
-			import std.math;
-			string gname = groupNames.next!string();
-			auto gid = rndtol(groupNames.next!string().to!double);
-			if (m_redisDB.sisMember("userman:group:" ~ gname ~ ":members", id))
+		foreach (id, grp; m_groups) {
+			if (m_redisDB.sisMember("userman:group:" ~ grp.id ~ ":members", id))
 			{
 				++ret.groups.length;
-				ret.groups[ret.groups.length - 1] = Group.ID(gid);
+				ret.groups[ret.groups.length - 1] = grp.id;
 			}
 		}
 
@@ -206,16 +187,15 @@ class RedisUserManController : UserManController {
 
 	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
 	{
-		auto userIds = m_redisDB.zrange("userman:users", first_user, first_user + max_count);
-		while (userIds.hasNext()) {
-			auto usr = getUser(User.ID(userIds.next!string().to!long));
+		foreach (userId; m_redisDB.zrange!string("userman:user:all", first_user, first_user + max_count)) {
+			auto usr = getUser(User.ID(userId.to!long));
 			del(usr);
 		}
 	}
 
 	override long getUserCount()
 	{
-		return m_redisDB.zcard("userman:users");
+		return m_redisDB.zcard("userman:user:all");
 	}
 
 	override void deleteUser(User.ID user_id)
@@ -223,7 +203,7 @@ class RedisUserManController : UserManController {
 		User usr = getUser(user_id);
 
 		// Indexes
-		m_redisDB.zrem("userman:users", user_id);
+		m_redisDB.zrem("userman:user:all", user_id);
 		m_redisDB.del("userman:email_user:" ~ usr.email);
 		m_redisDB.del("userman:name_user:" ~ usr.name);
 
@@ -231,11 +211,11 @@ class RedisUserManController : UserManController {
 		m_redisDB.del(format("userman:user:%s", user_id));
 
 		// Credentials
-		m_redisDB.del(format("userman:user:%s:auth", user_id));
+		m_authInfos.remove(user_id.longValue);
 
 		// Group membership
-		foreach(string group; usr.groups)
-			m_redisDB.srem("userman:group:" ~ group ~ ":members", user_id);
+		foreach(Group.ID gid; usr.groups)
+			m_redisDB.srem("userman:group:" ~ gid ~ ":members", user_id);
 	}
 
 	override void updateUser(in ref User user)
@@ -255,21 +235,14 @@ class RedisUserManController : UserManController {
 						"resetCodeExpireTime", user.resetCodeExpireTime == SysTime() ? "" : user.resetCodeExpireTime.toISOExtString());
 
 		// Credentials
-		m_redisDB.hmset(format("userman:user:%s:auth", user.id),
-						"method", user.auth.method,
-						"passwordHash", user.auth.passwordHash,
-						"token", user.auth.token,
-						"secret", user.auth.secret,
-						"info", user.auth.info);
+		m_authInfos[user.id.longValue] = user.auth;
 
 
-		auto groupNames = m_redisDB.zrange("userman:groups", 0, -1);
-		while (groupNames.hasNext()) {
-			string name = groupNames.next!string();
-			if (user.isInGroup(name))
-				m_redisDB.sadd("userman:group:" ~ name ~ ":members", user.id);
+		foreach (id, grp; m_groups) {
+			if (user.isInGroup(grp.id))
+				m_redisDB.sadd("userman:group:" ~ grp.id ~ ":members", user.id);
 			else
-				m_redisDB.srem("userman:group:" ~ name ~ ":members", user.id);
+				m_redisDB.srem("userman:group:" ~ grp.id ~ ":members", user.id);
 		}
 	}
 	
@@ -295,17 +268,19 @@ class RedisUserManController : UserManController {
 	
 	override void addGroup(string name, string description)
 	{
-		enforce(!m_redisDB.hexists("userman:groups", name), "A group with this name already exists.");
+		foreach (id, grp; m_groups) {
+			enforce(grp.name != name, "A group with this name already exists.");
+		}
 
-		long groupId = m_redisDB.incr("userman:nextGroupId");
+		// Add Group
+		long groupId = m_groups.createID();
+		Group grp = {
+			id: Group.ID(groupId), 
+			name: name, 
+			description: description
+		};
 
-		// Index
-		m_redisDB.zadd("userman:groups", groupId, name);
-
-		// Group
-		m_redisDB.hmset(format("userman:group:%s", groupId),
-						"name", name,
-						"description", description);
+		m_groups[groupId] = grp;
 
 	}
 }
