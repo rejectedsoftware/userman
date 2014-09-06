@@ -11,6 +11,9 @@ import userman.controller;
 
 import vibe.db.redis.redis;
 import vibe.db.redis.idioms;
+import vibe.db.redis.types;
+import vibe.data.bson;
+import vibe.data.json;
 
 import std.datetime;
 import std.exception;
@@ -24,6 +27,7 @@ class RedisUserManController : UserManController {
 		RedisDatabase m_redisDB;
 
 		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
+		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_properties;
 		RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging) m_groups;
 	}
 	
@@ -55,6 +59,7 @@ class RedisUserManController : UserManController {
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
 
 		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
+		m_properties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
 		m_groups = RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
 	}
 
@@ -97,6 +102,13 @@ class RedisUserManController : UserManController {
 		// Credentials
 		m_authInfos[userId] = usr.auth;
 
+		// Properties
+		auto props = m_properties[userId];
+		foreach(string name, Bson value; usr.properties) {
+			props[name] = value.toString();
+		}
+
+		// Group membership
 		foreach(Group.ID gid; usr.groups)
 			m_redisDB.sadd("userman:group:" ~ gid ~ ":members", userId);
 
@@ -110,6 +122,7 @@ class RedisUserManController : UserManController {
 
 		User ret;
 
+		// User
 		ret.id = id;
 		while (userHash.hasNext()) {
 		 	string key = userHash.next!string();
@@ -132,8 +145,16 @@ class RedisUserManController : UserManController {
 		 	}
 		}
 
+		// Credentials
 		ret.auth = m_authInfos[id.longValue];
 
+		// Properties
+		auto props = m_properties[id.longValue];
+		foreach(string name, string value; props) {
+			ret.properties[name] = Bson(parseJsonString(value));
+		}
+
+		// Group membership
 		foreach (id, grp; m_groups) {
 			if (m_redisDB.sisMember("userman:group:" ~ grp.id ~ ":members", id))
 			{
@@ -213,6 +234,9 @@ class RedisUserManController : UserManController {
 		// Credentials
 		m_authInfos.remove(user_id.longValue);
 
+		// Properties
+		m_properties[user_id.longValue].value.remove();
+
 		// Group membership
 		foreach(Group.ID gid; usr.groups)
 			m_redisDB.srem("userman:group:" ~ gid ~ ":members", user_id);
@@ -224,7 +248,7 @@ class RedisUserManController : UserManController {
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
 		// User
-		m_redisDB.hmset(format("userman:user:%s", user.id), 
+		m_redisDB.hmset(format("userman:user:%s", user.id.longValue), 
 						"active", to!string(user.active), 
 						"banned", to!string(user.banned), 
 						"name", user.name, 
@@ -237,7 +261,14 @@ class RedisUserManController : UserManController {
 		// Credentials
 		m_authInfos[user.id.longValue] = user.auth;
 
+		// Properties
+		auto props = m_properties[user.id.longValue];
+		props.value.remove();
+		foreach(string name, Bson value; user.properties) {
+			props[name] = value.toString();
+		}
 
+		// Group membership
 		foreach (id, grp; m_groups) {
 			if (user.isInGroup(grp.id))
 				m_redisDB.sadd("userman:group:" ~ grp.id ~ ":members", user.id);
@@ -248,22 +279,33 @@ class RedisUserManController : UserManController {
 	
 	override void setEmail(User.ID user, string email)
 	{
-		assert(false);
+		string key = format("userman:user:%s", user.longValue);
+		if (m_redisDB.exists(key))
+			m_redisDB.hset!string(key, "email", email);
 	}
 
 	override void setFullName(User.ID user, string full_name)
 	{
-		assert(false);
+		string key = format("userman:user:%s", user.longValue);
+		if (m_redisDB.exists(key))
+			m_redisDB.hset!string(key, "fullName", full_name);
 	}
 	
 	override void setPassword(User.ID user, string password)
 	{
-		assert(false);
+		if (m_redisDB.exists(format("userman:user:%s", user.longValue))) {
+			import vibe.crypto.passwordhash;
+			AuthInfo auth = m_authInfos[user.longValue];
+			auth.method = "password";
+			auth.passwordHash = generateSimplePasswordHash(password);
+			m_authInfos[user.longValue] = auth;
+		}
 	}
 	
 	override void setProperty(User.ID user, string name, string value)
 	{
-		assert(false);
+		if (m_redisDB.exists(format("userman:user:%s", user.longValue)))
+			m_properties[user.longValue][name] = Bson(value).toString();
 	}
 	
 	override void addGroup(string name, string description)
