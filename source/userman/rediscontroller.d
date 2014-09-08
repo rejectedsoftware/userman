@@ -26,10 +26,15 @@ class RedisUserManController : UserManController {
 		RedisClient m_redisClient;
 		RedisDatabase m_redisDB;
 
+		//RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.none) m_users;
 		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_properties;
 		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_groupProperties;
+
+		// secondary indexes
+		RedisHash!(long) m_usersByName;
+		RedisHash!(long) m_usersByEmail;
 	}
 	
 	this(UserManSettings settings)
@@ -59,17 +64,20 @@ class RedisUserManController : UserManController {
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
 
+		//m_users = RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:user");
 		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
 		m_properties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
 		m_groups = RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
 		m_groupProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:group", "properties");
+		m_usersByName = RedisHash!long(m_redisDB, "userman:user:byName");
+		m_usersByEmail = RedisHash!long(m_redisDB, "userman:user:byEmail");
 	}
 
 	override bool isEmailRegistered(string email)
 	{
-		long userId = m_redisDB.get!long("userman:email_user:" ~ email);
-		if (userId >= 0){
-			string method = m_authInfos[userId].method;
+		auto uid = m_usersByEmail.get(email, -1);
+		if (uid >= 0){
+			string method = m_authInfos[uid].method;
 			return method != string.init && method.length > 0;
 		}
 		return false;
@@ -79,19 +87,19 @@ class RedisUserManController : UserManController {
 	{
 		validateUser(usr);
 
-		enforce(m_redisDB.get!string("userman:name_user:" ~ usr.name) == string.init, "The user name is already taken.");
-		enforce(m_redisDB.get!string("userman:email_user:" ~ usr.email) == string.init, "The email address is already in use.");
+		enforce(!m_usersByName.exists(usr.name), "The user name is already taken.");
+		enforce(!m_usersByEmail.exists(usr.email), "The email address is already taken.");
 
-		long userId = m_redisDB.incr("userman:user:max");
-		m_redisDB.zadd("userman:user:all", userId, userId);
-		usr.id = User.ID(userId);
+		long uid = m_redisDB.incr("userman:user:max");
+		m_redisDB.zadd("userman:user:all", uid, uid);
+		usr.id = User.ID(uid);
 
 		// Indexes
-		if (usr.email != string.init) m_redisDB.set("userman:email_user:" ~ usr.email, to!string(userId));
-		if (usr.name != string.init) m_redisDB.set("userman:name_user:" ~ usr.name, to!string(userId));
+		m_usersByEmail[usr.email] = uid;
+		m_usersByName[usr.name] = uid;
 
 		// User
-		m_redisDB.hmset(format("userman:user:%s", userId), 
+		m_redisDB.hmset(format("userman:user:%s", uid), 
 						"active", to!string(usr.active), 
 						"banned", to!string(usr.banned), 
 						"name", usr.name, 
@@ -102,16 +110,16 @@ class RedisUserManController : UserManController {
 						"resetCodeExpireTime", usr.resetCodeExpireTime == SysTime() ? "" : usr.resetCodeExpireTime.toISOExtString());
 
 		// Credentials
-		m_authInfos[userId] = usr.auth;
+		m_authInfos[uid] = usr.auth;
 
 		// Properties
-		auto props = m_properties[userId];
+		auto props = m_properties[uid];
 		foreach (string name, value; usr.properties)
 			props[name] = value.toString();
 
 		// Group membership
 		foreach(Group.ID gid; usr.groups)
-			m_redisDB.sadd("userman:group:" ~ gid ~ ":members", userId);
+			m_redisDB.sadd("userman:group:" ~ gid ~ ":members", uid);
 
 		return usr.id;
 	}
@@ -171,9 +179,7 @@ class RedisUserManController : UserManController {
 		name = name.toLower();
 
 		User.ID userId = m_redisDB.get!string("userman:name_user:" ~ name).to!long;
-		try {
-			return getUser(userId);
-		}
+		try return getUser(userId);
 		catch (Exception e) {
 			throw new Exception("The specified user name is not registered.");
 		}
@@ -183,10 +189,8 @@ class RedisUserManController : UserManController {
 	{
 		email = email.toLower();
 
-		User.ID userId = m_redisDB.get!string("userman:email_user:" ~ email).to!long;
-		try {
-			return getUser(userId);
-		}
+		User.ID uid = m_usersByEmail.get(email, -1);
+		try return getUser(uid);
 		catch (Exception e) {
 			throw new Exception("There is no user account for the specified email address.");
 		}
@@ -194,13 +198,10 @@ class RedisUserManController : UserManController {
 
 	override User getUserByEmailOrName(string email_or_name)
 	{
-		string userId = m_redisDB.get!string("userman:email_user:" ~ email_or_name.toLower());
-		if (userId == null) 
-			userId = m_redisDB.get!string("userman:name_user:" ~ email_or_name);
+		long uid = m_usersByEmail.get(email_or_name, -1);
+		if (uid < 0) uid = m_usersByName.get(email_or_name, -1);
 
-		try {
-			return getUser(User.ID(userId.to!long));
-		}
+		try return getUser(User.ID(uid));
 		catch (Exception e) {
 			throw new Exception("The specified email address or user name is not registered.");
 		}
@@ -225,8 +226,8 @@ class RedisUserManController : UserManController {
 
 		// Indexes
 		m_redisDB.zrem("userman:user:all", user_id);
-		m_redisDB.del("userman:email_user:" ~ usr.email);
-		m_redisDB.del("userman:name_user:" ~ usr.name);
+		m_usersByEmail.remove(usr.email);
+		m_usersByName.remove(usr.name);
 
 		// User
 		m_redisDB.del(format("userman:user:%s", user_id));
@@ -274,6 +275,8 @@ class RedisUserManController : UserManController {
 			else
 				m_redisDB.srem("userman:group:" ~ gid.to!string ~ ":members", user.id);
 		}
+
+		// FIXME: update m_usersByEmail and m_usersByName
 	}
 	
 	override void setEmail(User.ID user, string email)
@@ -281,6 +284,8 @@ class RedisUserManController : UserManController {
 		string key = format("userman:user:%s", user.longValue);
 		if (m_redisDB.exists(key))
 			m_redisDB.hset!string(key, "email", email);
+
+		// FIXME: update m_usersByEmail
 	}
 
 	override void setFullName(User.ID user, string full_name)
