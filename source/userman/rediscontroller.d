@@ -14,6 +14,7 @@ import vibe.db.redis.idioms;
 import vibe.db.redis.types;
 import vibe.data.bson;
 import vibe.data.json;
+import vibe.utils.validation;
 
 import std.datetime;
 import std.exception;
@@ -210,6 +211,11 @@ class RedisUserManController : UserManController {
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
+		enforce(!m_usersByEmail.exists(user.email), "E-mail address is already in use.");
+		enforce(!m_usersByName.exists(user.name), "User name address is already in use.");
+		m_usersByEmail[user.email] = user.id.longValue;
+		m_usersByName[user.name] = user.id.longValue;
+
 		// User
 		m_users[user.id.longValue] = user.redisStrip();
 
@@ -229,17 +235,16 @@ class RedisUserManController : UserManController {
 			else
 				m_redisDB.srem("userman:group:" ~ gid.to!string ~ ":members", user.id);
 		}
-
-		// FIXME: update m_usersByEmail and m_usersByName
 	}
 	
 	override void setEmail(User.ID user, string email)
 	{
+		validateEmail(email);
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
-		m_users[user.longValue].email = email;
+		enforce(!m_usersByEmail.exists(email), "E-mail address is already in use.");
 
-		// FIXME: validate email
-		// FIXME: update m_usersByEmail
+		m_usersByEmail[email] = user.longValue;
+		m_users[user.longValue].email = email;
 	}
 
 	override void setFullName(User.ID user, string full_name)
