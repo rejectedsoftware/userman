@@ -92,11 +92,14 @@ class RedisUserManController : UserManController {
 		enforce(!m_usersByEmail.exists(usr.email), "The email address is already taken.");
 
 		auto uid = m_users.createID();
+		scope (failure) m_users.remove(uid);
 		usr.id = User.ID(uid);
 
 		// Indexes
-		m_usersByEmail[usr.email] = uid;
-		m_usersByName[usr.name] = uid;
+		enforce(m_usersByEmail.setIfNotExist(usr.email, uid), "Failed to associate new user with e-mail address.");
+		scope (failure) m_usersByEmail.remove(usr.email);
+		enforce(m_usersByName.setIfNotExist(usr.name, uid), "Failed to associate new user with user name.");
+		scope (failure) m_usersByName.remove(usr.name);
 
 		// User
 		m_users[uid] = usr.redisStrip();
@@ -211,12 +214,20 @@ class RedisUserManController : UserManController {
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
-		enforce(m_usersByEmail.get(user.email, user.id.longValue) == user.id.longValue,
+		auto exeid = m_usersByEmail.get(user.email, -1);
+		enforce(exeid < 0 || exeid == user.id.longValue,
 			"E-mail address is already in use.");
-		enforce(m_usersByName.get(user.name, user.id.longValue) == user.id.longValue,
+		enforce(exeid == user.id.longValue || m_usersByEmail.setIfNotExist(user.email, user.id.longValue),
+			"Failed to associate new e-mail address to user.");
+		scope (failure) m_usersByEmail.remove(user.email);
+
+		auto exnid = m_usersByName.get(user.name, -1);
+		enforce(exnid < 0 || exnid == user.id.longValue,
 			"User name address is already in use.");
-		m_usersByEmail[user.email] = user.id.longValue;
-		m_usersByName[user.name] = user.id.longValue;
+		enforce(exnid == user.id.longValue || m_usersByName.setIfNotExist(user.name, user.id.longValue),
+			"Failed to associate new user name to user.");
+		scope (failure) m_usersByEmail.remove(user.name);
+
 
 		// User
 		m_users[user.id.longValue] = user.redisStrip();
@@ -243,10 +254,13 @@ class RedisUserManController : UserManController {
 	{
 		validateEmail(email);
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
-		enforce(m_usersByEmail.get(email, user.longValue) == user.longValue,
-			"E-mail address is already in use.");
 
-		m_usersByEmail[email] = user.longValue;
+		auto exid = m_usersByEmail.get(email, -1);
+		enforce(exid < 0 || exid == user.longValue,
+			"E-mail address is already in use.");
+		enforce(exid == user.longValue || m_usersByEmail.setIfNotExist(email, user.longValue),
+			"Failed to associate new e-mail address to user.");
+
 		m_users[user.longValue].email = email;
 	}
 
