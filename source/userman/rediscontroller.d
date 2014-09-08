@@ -27,8 +27,8 @@ class RedisUserManController : UserManController {
 		RedisDatabase m_redisDB;
 
 		RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging) m_users;
-		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
-		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_properties;
+		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_userAuthInfo;
+		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_userProperties;
 		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_groupProperties;
 
@@ -65,8 +65,8 @@ class RedisUserManController : UserManController {
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
 
 		m_users = RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:user");
-		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
-		m_properties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
+		m_userAuthInfo = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
+		m_userProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
 		m_groups = RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
 		m_groupProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:group", "properties");
 		m_usersByName = RedisHash!long(m_redisDB, "userman:user:byName");
@@ -77,7 +77,7 @@ class RedisUserManController : UserManController {
 	{
 		auto uid = m_usersByEmail.get(email, -1);
 		if (uid >= 0){
-			string method = m_authInfos[uid].method;
+			string method = m_userAuthInfo[uid].method;
 			return method != string.init && method.length > 0;
 		}
 		return false;
@@ -101,10 +101,10 @@ class RedisUserManController : UserManController {
 		m_users[uid] = usr.redisStrip();
 
 		// Credentials
-		m_authInfos[uid] = usr.auth;
+		m_userAuthInfo[uid] = usr.auth;
 
 		// Properties
-		auto props = m_properties[uid];
+		auto props = m_userProperties[uid];
 		foreach (string name, value; usr.properties)
 			props[name] = value.toString();
 
@@ -128,11 +128,11 @@ class RedisUserManController : UserManController {
 				groups ~= Group.ID(gid);
 
 		// Credentials
-		auto auth = m_authInfos[id.longValue];
+		auto auth = m_userAuthInfo[id.longValue];
 
 		// Properties
 		Json[string] properties;
-		foreach(string name, string value; m_properties[id.longValue])
+		foreach(string name, string value; m_userProperties[id.longValue])
 			properties[name] = parseJsonString(value);
 
 		return susr.unstrip(id, groups, auth, properties);
@@ -194,10 +194,10 @@ class RedisUserManController : UserManController {
 		m_usersByName.remove(usr.name);
 
 		// Credentials
-		m_authInfos.remove(user_id.longValue);
+		m_userAuthInfo.remove(user_id.longValue);
 
 		// Properties
-		m_properties[user_id.longValue].value.remove();
+		m_userProperties[user_id.longValue].value.remove();
 
 		// Group membership
 		foreach(Group.ID gid; usr.groups)
@@ -214,10 +214,10 @@ class RedisUserManController : UserManController {
 		m_users[user.id.longValue] = user.redisStrip();
 
 		// Credentials
-		m_authInfos[user.id.longValue] = user.auth;
+		m_userAuthInfo[user.id.longValue] = user.auth;
 
 		// Properties
-		auto props = m_properties[user.id.longValue];
+		auto props = m_userProperties[user.id.longValue];
 		props.value.remove();
 		foreach (string name, value; user.properties)
 			props[name] = value.toString();
@@ -254,17 +254,17 @@ class RedisUserManController : UserManController {
 
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 
-		AuthInfo auth = m_authInfos[user.longValue];
+		AuthInfo auth = m_userAuthInfo[user.longValue];
 		auth.method = "password";
 		auth.passwordHash = generateSimplePasswordHash(password);
-		m_authInfos[user.longValue] = auth;
+		m_userAuthInfo[user.longValue] = auth;
 	}
 	
 	override void setProperty(User.ID user, string name, string value)
 	{
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 
-		m_properties[user.longValue][name] = Bson(value).toString();
+		m_userProperties[user.longValue][name] = Bson(value).toString();
 	}
 	
 	override void addGroup(string name, string description)
