@@ -27,6 +27,17 @@ import std.random;
 import std.string;
 
 
+UserManController createUserManController(UserManSettings settings)
+{
+	import userman.mongocontroller;
+	import userman.rediscontroller;
+	
+	auto url = settings.databaseURL;
+	if (url.startsWith("redis://")) return new RedisUserManController(settings);
+	else if (url.startsWith("mongodb://")) return new MongoUserManController(settings);
+	else throw new Exception("Unknown URL schema: "~url);
+}
+
 class UserManController {
 	protected {
 		UserManSettings m_settings;

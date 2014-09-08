@@ -8,13 +8,14 @@
 import vibe.d;
 
 import userman.web;
-import userman.mongocontroller;
+import userman.controller;
 
 shared static this()
 {
 	auto usettings = new UserManSettings;
-	auto uctrl = new MongoUserManController(usettings);
-	auto uweb = new UserManWebInterface(uctrl);
+	//usettings.databaseURL = "redis://127.0.0.1/0";
+
+	auto uctrl = createUserManController(usettings);
 
 	auto router = new URLRouter;
 	router.registerUserManWebInterface(uctrl);
