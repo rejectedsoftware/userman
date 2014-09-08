@@ -26,7 +26,7 @@ class RedisUserManController : UserManController {
 		RedisClient m_redisClient;
 		RedisDatabase m_redisDB;
 
-		//RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.none) m_users;
+		RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging) m_users;
 		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_properties;
 		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
@@ -64,7 +64,7 @@ class RedisUserManController : UserManController {
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
 
-		//m_users = RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:user");
+		m_users = RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:user");
 		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
 		m_properties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
 		m_groups = RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
@@ -90,8 +90,7 @@ class RedisUserManController : UserManController {
 		enforce(!m_usersByName.exists(usr.name), "The user name is already taken.");
 		enforce(!m_usersByEmail.exists(usr.email), "The email address is already taken.");
 
-		long uid = m_redisDB.incr("userman:user:max");
-		m_redisDB.zadd("userman:user:all", uid, uid);
+		auto uid = m_users.createID();
 		usr.id = User.ID(uid);
 
 		// Indexes
@@ -99,15 +98,7 @@ class RedisUserManController : UserManController {
 		m_usersByName[usr.name] = uid;
 
 		// User
-		m_redisDB.hmset(format("userman:user:%s", uid), 
-						"active", to!string(usr.active), 
-						"banned", to!string(usr.banned), 
-						"name", usr.name, 
-						"fullName", usr.fullName, 
-						"email", usr.email, 
-						"activationCode", usr.activationCode,
-						"resetCode", usr.resetCode,
-						"resetCodeExpireTime", usr.resetCodeExpireTime == SysTime() ? "" : usr.resetCodeExpireTime.toISOExtString());
+		m_users[uid] = usr.redisStrip();
 
 		// Credentials
 		m_authInfos[uid] = usr.auth;
@@ -126,52 +117,25 @@ class RedisUserManController : UserManController {
 
 	override User getUser(User.ID id)
 	{
-		auto userHash = m_redisDB.hgetAll("userman:user:" ~ id);
-		enforce(userHash.hasNext(), "The specified user id is invalid.");
-
-		User ret;
-
-		// User
-		ret.id = id;
-		while (userHash.hasNext()) {
-		 	string key = userHash.next!string();
-		 	string value = userHash.next!string();
-		 	switch (key)
-		 	{
-		 		case "active": ret.active = to!bool(value); break;
-		 		case "banned": ret.banned = to!bool(value); break;
-		 		case "name": ret.name = value; break;
-		 		case "fullName": ret.fullName = value; break;
-		 		case "email": ret.email = value; break;
-		 		case "activationCode": ret.activationCode = value; break;
-		 		case "resetCode": ret.resetCode = value; break;
-		 		case "resetCodeExpireTime":
-		 			try {
-		 				ret.resetCodeExpireTime = SysTime.fromISOExtString(value);
-	 				} catch (DateTimeException dte) {}
-	 				break;
-		 		default: break;
-		 	}
-		}
-
-		// Credentials
-		ret.auth = m_authInfos[id.longValue];
-
-		// Properties
-		auto props = m_properties[id.longValue];
-		foreach(string name, string value; props)
-			ret.properties[name] = parseJsonString(value);
+		auto susr = m_users[id.longValue];
+		enforce(susr.exists, "The specified user id is invalid.");
 
 		// Group membership
-		foreach (gid, grp; m_groups) {
+		// TODO: avoid going over all (potentially large number of) groups
+		Group.ID[] groups;
+		foreach (gid, grp; m_groups)
 			if (m_redisDB.sisMember("userman:group:" ~ gid.to!string ~ ":members", id))
-			{
-				++ret.groups.length;
-				ret.groups[ret.groups.length - 1] = gid;
-			}
-		}
+				groups ~= Group.ID(gid);
 
-		return ret;
+		// Credentials
+		auto auth = m_authInfos[id.longValue];
+
+		// Properties
+		Json[string] properties;
+		foreach(string name, string value; m_properties[id.longValue])
+			properties[name] = parseJsonString(value);
+
+		return susr.unstrip(id, groups, auth, properties);
 	}
 
 	override User getUserByName(string name)
@@ -225,12 +189,9 @@ class RedisUserManController : UserManController {
 		User usr = getUser(user_id);
 
 		// Indexes
-		m_redisDB.zrem("userman:user:all", user_id);
+		m_users.remove(user_id.longValue);
 		m_usersByEmail.remove(usr.email);
 		m_usersByName.remove(usr.name);
-
-		// User
-		m_redisDB.del(format("userman:user:%s", user_id));
 
 		// Credentials
 		m_authInfos.remove(user_id.longValue);
@@ -245,19 +206,12 @@ class RedisUserManController : UserManController {
 
 	override void updateUser(in ref User user)
 	{
+		enforce(m_users.isMember(user.id.longValue), "Invalid user ID.");
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
 		// User
-		m_redisDB.hmset(format("userman:user:%s", user.id.longValue), 
-						"active", to!string(user.active), 
-						"banned", to!string(user.banned), 
-						"name", user.name, 
-						"fullName", user.fullName, 
-						"email", user.email, 
-						"activationCode", user.activationCode,
-						"resetCode", user.resetCode,
-						"resetCodeExpireTime", user.resetCodeExpireTime == SysTime() ? "" : user.resetCodeExpireTime.toISOExtString());
+		m_users[user.id.longValue] = user.redisStrip();
 
 		// Credentials
 		m_authInfos[user.id.longValue] = user.auth;
@@ -281,39 +235,41 @@ class RedisUserManController : UserManController {
 	
 	override void setEmail(User.ID user, string email)
 	{
-		string key = format("userman:user:%s", user.longValue);
-		if (m_redisDB.exists(key))
-			m_redisDB.hset!string(key, "email", email);
+		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
+		m_users[user.longValue].email = email;
 
+		// FIXME: validate email
 		// FIXME: update m_usersByEmail
 	}
 
 	override void setFullName(User.ID user, string full_name)
 	{
-		string key = format("userman:user:%s", user.longValue);
-		if (m_redisDB.exists(key))
-			m_redisDB.hset!string(key, "fullName", full_name);
+		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
+		m_users[user.longValue].fullName = full_name;
 	}
 	
 	override void setPassword(User.ID user, string password)
 	{
-		if (m_redisDB.exists(format("userman:user:%s", user.longValue))) {
-			import vibe.crypto.passwordhash;
-			AuthInfo auth = m_authInfos[user.longValue];
-			auth.method = "password";
-			auth.passwordHash = generateSimplePasswordHash(password);
-			m_authInfos[user.longValue] = auth;
-		}
+		import vibe.crypto.passwordhash;
+
+		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
+
+		AuthInfo auth = m_authInfos[user.longValue];
+		auth.method = "password";
+		auth.passwordHash = generateSimplePasswordHash(password);
+		m_authInfos[user.longValue] = auth;
 	}
 	
 	override void setProperty(User.ID user, string name, string value)
 	{
-		if (m_redisDB.exists(format("userman:user:%s", user.longValue)))
-			m_properties[user.longValue][name] = Bson(value).toString();
+		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
+
+		m_properties[user.longValue][name] = Bson(value).toString();
 	}
 	
 	override void addGroup(string name, string description)
 	{
+		// TODO: avoid iterating over all groups!
 		foreach (id, grp; m_groups) {
 			enforce(grp.name != name, "A group with this name already exists.");
 		}
