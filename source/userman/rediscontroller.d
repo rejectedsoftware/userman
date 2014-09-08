@@ -28,7 +28,8 @@ class RedisUserManController : UserManController {
 
 		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_authInfos;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_properties;
-		RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging) m_groups;
+		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
+		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_groupProperties;
 	}
 	
 	this(UserManSettings settings)
@@ -60,7 +61,8 @@ class RedisUserManController : UserManController {
 
 		m_authInfos = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
 		m_properties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
-		m_groups = RedisObjectCollection!(Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
+		m_groups = RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
+		m_groupProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:group", "properties");
 	}
 
 	override bool isEmailRegistered(string email)
@@ -104,9 +106,8 @@ class RedisUserManController : UserManController {
 
 		// Properties
 		auto props = m_properties[userId];
-		foreach(string name, Bson value; usr.properties) {
+		foreach (string name, value; usr.properties)
 			props[name] = value.toString();
-		}
 
 		// Group membership
 		foreach(Group.ID gid; usr.groups)
@@ -150,16 +151,15 @@ class RedisUserManController : UserManController {
 
 		// Properties
 		auto props = m_properties[id.longValue];
-		foreach(string name, string value; props) {
-			ret.properties[name] = Bson(parseJsonString(value));
-		}
+		foreach(string name, string value; props)
+			ret.properties[name] = parseJsonString(value);
 
 		// Group membership
-		foreach (id, grp; m_groups) {
-			if (m_redisDB.sisMember("userman:group:" ~ grp.id ~ ":members", id))
+		foreach (gid, grp; m_groups) {
+			if (m_redisDB.sisMember("userman:group:" ~ gid.to!string ~ ":members", id))
 			{
 				++ret.groups.length;
-				ret.groups[ret.groups.length - 1] = grp.id;
+				ret.groups[ret.groups.length - 1] = gid;
 			}
 		}
 
@@ -264,16 +264,15 @@ class RedisUserManController : UserManController {
 		// Properties
 		auto props = m_properties[user.id.longValue];
 		props.value.remove();
-		foreach(string name, Bson value; user.properties) {
+		foreach (string name, value; user.properties)
 			props[name] = value.toString();
-		}
 
 		// Group membership
-		foreach (id, grp; m_groups) {
-			if (user.isInGroup(grp.id))
-				m_redisDB.sadd("userman:group:" ~ grp.id ~ ":members", user.id);
+		foreach (gid, grp; m_groups) {
+			if (user.isInGroup(Group.ID(gid)))
+				m_redisDB.sadd("userman:group:" ~ gid.to!string ~ ":members", user.id);
 			else
-				m_redisDB.srem("userman:group:" ~ grp.id ~ ":members", user.id);
+				m_redisDB.srem("userman:group:" ~ gid.to!string ~ ":members", user.id);
 		}
 	}
 	
@@ -322,7 +321,8 @@ class RedisUserManController : UserManController {
 			description: description
 		};
 
-		m_groups[groupId] = grp;
-
+		m_groups[groupId] = grp.redisStrip();
+		foreach (k, v; grp.properties)
+			m_groupProperties[groupId][k] = v.toString();
 	}
 }
