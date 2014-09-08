@@ -143,7 +143,7 @@ class RedisUserManController : UserManController {
 	{
 		name = name.toLower();
 
-		User.ID userId = m_redisDB.get!string("userman:name_user:" ~ name).to!long;
+		User.ID userId = m_usersByName.get(name, -1);
 		try return getUser(userId);
 		catch (Exception e) {
 			throw new Exception("The specified user name is not registered.");
@@ -211,8 +211,10 @@ class RedisUserManController : UserManController {
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 
-		enforce(!m_usersByEmail.exists(user.email), "E-mail address is already in use.");
-		enforce(!m_usersByName.exists(user.name), "User name address is already in use.");
+		enforce(m_usersByEmail.get(user.email, user.id.longValue) == user.id.longValue,
+			"E-mail address is already in use.");
+		enforce(m_usersByName.get(user.name, user.id.longValue) == user.id.longValue,
+			"User name address is already in use.");
 		m_usersByEmail[user.email] = user.id.longValue;
 		m_usersByName[user.name] = user.id.longValue;
 
@@ -241,7 +243,8 @@ class RedisUserManController : UserManController {
 	{
 		validateEmail(email);
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
-		enforce(!m_usersByEmail.exists(email), "E-mail address is already in use.");
+		enforce(m_usersByEmail.get(email, user.longValue) == user.longValue,
+			"E-mail address is already in use.");
 
 		m_usersByEmail[email] = user.longValue;
 		m_users[user.longValue].email = email;
