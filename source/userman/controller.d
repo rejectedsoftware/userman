@@ -105,13 +105,9 @@ class UserManController {
 
 			if( m_settings.mailSettings ){
 				auto msg = new MemoryOutputStream;
-				parseDietFileCompat!("userman.mail.invitation.dt",
-					User, "user",
-					string, "serviceName",
-					URL, "serviceUrl")(msg,
-						user,
-						m_settings.serviceName,
-						m_settings.serviceUrl);
+				auto serviceName = m_settings.serviceName;
+				auto serviceUrl = m_settings.serviceUrl;
+				parseDietFile!("userman.mail.invitation.dt", user, serviceName, serviceUrl)(msg);
 
 				auto mail = new Mail;
 				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -147,13 +143,9 @@ class UserManController {
 		enforce(!user.active, "The user account is already active.");
 		
 		auto msg = new MemoryOutputStream;
-		parseDietFileCompat!("userman.mail.activation.dt",
-			User, "user",
-			string, "serviceName",
-			URL, "serviceUrl")(msg,
-				user,
-				m_settings.serviceName,
-				m_settings.serviceUrl);
+		auto serviceName = m_settings.serviceName;
+		auto serviceUrl = m_settings.serviceUrl;
+		parseDietFile!("userman.mail.activation.dt", user, serviceName, serviceUrl)(msg);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -177,11 +169,9 @@ class UserManController {
 
 		if( m_settings.mailSettings ){
 			auto msg = new MemoryOutputStream;
-			parseDietFileCompat!("userman.mail.reset_password.dt",
-				User*, "user",
-				string, "reset_code",
-				UserManSettings, "settings")
-				(msg, &usr, reset_code, m_settings);
+			auto user = &usr;
+			auto settings = m_settings;
+			parseDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
 
 			auto mail = new Mail;
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
