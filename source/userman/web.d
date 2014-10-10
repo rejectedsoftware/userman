@@ -58,9 +58,9 @@ void updateProfile(UserManController controller, User user, HTTPServerRequest re
 
 	controller.updateUser(user);
 
-	req.session["userName"] = user.name;
-	req.session["userFullName"] = user.fullName;
-	req.session["userEmail"] = user.email;
+	req.session.set("userName", user.name);
+	req.session.set("userFullName", user.fullName);
+	req.session.set("userEmail", user.email);
 }
 
 
@@ -103,7 +103,7 @@ class UserManWebAuthenticator {
 			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
 			return User.init;
 		} else {
-			return m_controller.getUserByName(req.session["userName"]);
+			return m_controller.getUserByName(req.session.get!string("userName"));
 		}
 	}
 	
@@ -112,7 +112,7 @@ class UserManWebAuthenticator {
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
 			if( !req.session ) return;
-			auto usr = m_controller.getUserByName(req.session["userName"]);
+			auto usr = m_controller.getUserByName(req.session.get!string("userName"));
 			callback(req, res, usr);
 		}
 		
