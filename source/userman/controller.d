@@ -189,9 +189,9 @@ class UserManController {
 		auto usr = getUserByEmail(email);
 		enforce(usr.resetCode.length > 0, "No password reset request was made.");
 		enforce(Clock.currTime() < usr.resetCodeExpireTime, "Reset code is expired, please request a new one.");
+		auto code = usr.resetCode;
 		usr.resetCode = "";
 		updateUser(usr);
-		auto code = usr.resetCode;
 		enforce(reset_code == code, "Invalid request code, please request a new one.");
 		usr.auth.passwordHash = generateSimplePasswordHash(new_password);
 		updateUser(usr);
