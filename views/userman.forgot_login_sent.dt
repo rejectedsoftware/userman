@@ -2,6 +2,6 @@ extends userman.layout_popup
 
 block title
 	- string title = "Password reset mail has been sent";
-	
+
 block userman.message
-	p An email has been sent to you with yout user name and a one-time link to reset your password.
+	p An email has been sent to you with your user name and a one-time link to reset your password.
