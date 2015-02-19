@@ -218,6 +218,8 @@ class UserManController {
 	abstract void setProperty(User.ID user, string name, string value);
 
 	abstract void addGroup(string name, string description);
+	abstract Group getGroup(Group.ID id);
+	abstract Group getGroupByName(string name);
 }
 
 struct User {

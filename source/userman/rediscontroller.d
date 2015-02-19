@@ -32,10 +32,13 @@ class RedisUserManController : UserManController {
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_userProperties;
 		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_groupProperties;
+		//RedisCollection!(RedisSet!GroupMember, RedisCollectionOptions.none) m_groupMembers;
 
 		// secondary indexes
 		RedisHash!(long) m_usersByName;
 		RedisHash!(long) m_usersByEmail;
+		//RedisHash!(long) m_userGroups;
+		RedisHash!long m_groupsByName;
 	}
 	
 	this(UserManSettings settings)
@@ -72,6 +75,7 @@ class RedisUserManController : UserManController {
 		m_groupProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:group", "properties");
 		m_usersByName = RedisHash!long(m_redisDB, "userman:user:byName");
 		m_usersByEmail = RedisHash!long(m_redisDB, "userman:user:byEmail");
+		m_groupsByName = RedisHash!long(m_redisDB, "userman:group:byName");
 	}
 
 	override bool isEmailRegistered(string email)
@@ -307,5 +311,27 @@ class RedisUserManController : UserManController {
 		m_groups[groupId] = grp.redisStrip();
 		foreach (k, v; grp.properties)
 			m_groupProperties[groupId][k] = v.toString();
+
+		m_groupsByName[name] = groupId;
+	}
+
+	override Group getGroup(Group.ID id)
+	{
+		auto sgrp = m_groups[id.longValue];
+		enforce(sgrp.exists, "The specified group id is invalid.");
+
+		// Properties
+		Json[string] properties;
+		foreach(string name, string value; m_groupProperties[id.longValue])
+			properties[name] = parseJsonString(value);
+
+		return sgrp.unstrip(id, properties);
+	}
+
+	override Group getGroupByName(string name)
+	{
+		auto grpid = m_groupsByName.get(name, -1);
+		enforce(grpid != -1, "The specified group name is unknown.");
+		return getGroup(Group.ID(grpid));
 	}
 }

@@ -143,4 +143,18 @@ class MongoUserManController : UserManController {
 		grp.description = description;
 		m_groups.insert(grp);
 	}
+
+	override Group getGroup(Group.ID id)
+	{
+		auto grp = m_groups.findOne!Group(["_id": id.bsonObjectIDValue]);
+		enforce(!grp.isNull(), "The specified group id is invalid.");
+		return grp;
+	}
+
+	override Group getGroupByName(string name)
+	{
+		auto grp = m_groups.findOne!Group(["name": name]);
+		enforce(!grp.isNull(), "The specified group name is unknown.");
+		return grp;
+	}
 }
