@@ -280,7 +280,7 @@ class UserManWebInterface {
 			string error;
 			render!("userman.register_activate.dt", error);
 		} else {
-			postLogin(name, password);
+			postLogin(username, password);
 		}
 	}
 	
