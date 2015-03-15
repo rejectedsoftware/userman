@@ -13,7 +13,8 @@ import userman.controller;
 shared static this()
 {
 	auto usettings = new UserManSettings;
-	//usettings.databaseURL = "redis://127.0.0.1/0";
+	usettings.requireAccountValidation = false;
+	usettings.databaseURL = "file://./testdb/";
 
 	auto uctrl = createUserManController(usettings);
 
