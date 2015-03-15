@@ -5,9 +5,9 @@
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: David Suppiger
 */
-module userman.rediscontroller;
+module userman.db.redis;
 
-import userman.controller;
+import userman.db.controller;
 
 import vibe.db.redis.redis;
 import vibe.db.redis.idioms;

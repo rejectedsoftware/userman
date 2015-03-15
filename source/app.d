@@ -8,7 +8,7 @@
 import vibe.d;
 
 import userman.web;
-import userman.controller;
+import userman.db.controller;
 
 shared static this()
 {

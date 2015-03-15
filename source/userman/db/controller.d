@@ -1,11 +1,11 @@
 /**
 	Database abstraction layer
 
-	Copyright: © 2012-2014 RejectedSoftware e.K.
+	Copyright: © 2012-2015 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
-module userman.controller;
+module userman.db.controller;
 
 public import userman.userman;
 import userman.id;
@@ -29,9 +29,9 @@ import std.string;
 
 UserManController createUserManController(UserManSettings settings)
 {
-	import userman.filecontroller;
-	import userman.mongocontroller;
-	import userman.rediscontroller;
+	import userman.db.file;
+	import userman.db.mongo;
+	import userman.db.redis;
 	
 	auto url = settings.databaseURL;
 	if (url.startsWith("redis://")) return new RedisUserManController(settings);

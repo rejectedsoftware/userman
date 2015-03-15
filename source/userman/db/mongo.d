@@ -5,9 +5,9 @@
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
-module userman.mongocontroller;
+module userman.db.mongo;
 
-import userman.controller;
+import userman.db.controller;
 
 import vibe.db.mongo.mongo;
 

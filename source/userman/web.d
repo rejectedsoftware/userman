@@ -7,7 +7,7 @@
 */
 module userman.web;
 
-public import userman.controller;
+public import userman.db.controller;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
