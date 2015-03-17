@@ -7,7 +7,6 @@
 	"dependencies": {
 		"vibe-d": "~>0.7.23-rc.1"
 	},
-	"excludedSourceFiles": ["source/userman/controller.d", "source/userman/mongocontroller.d", "source/userman/rediscontroller.d"],
 	"configurations": [
 		{
 			"name": "application",

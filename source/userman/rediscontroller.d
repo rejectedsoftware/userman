@@ -1,4 +1,4 @@
-//// compatibility module
+/// compatibility module
+deprecated("Import userman.rediscontroller is deprecated. Please import userman.db.redis instead.")
 module userman.rediscontroller;
-pragma(msg, "Import userman.rediscontroller is deprecated. Please import userman.db.redis instead.");
 public import userman.db.redis;
