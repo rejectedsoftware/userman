@@ -5,8 +5,9 @@
 	"copyright": "Copyright (c) 2012-2013 rejectedsoftware e.K.",
 	"license": "GPL-3.0",
 	"dependencies": {
-		"vibe-d": "~>0.7.23-beta.2"
+		"vibe-d": "~>0.7.23-rc.1"
 	},
+	"excludedSourceFiles": ["source/userman/controller.d", "source/userman/mongocontroller.d", "source/userman/rediscontroller.d"],
 	"configurations": [
 		{
 			"name": "application",
