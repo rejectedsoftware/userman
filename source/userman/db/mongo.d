@@ -67,7 +67,7 @@ class MongoUserManController : UserManController {
 		name = name.toLower();
 		auto usr = m_users.findOne!User(["name": name]);
 		enforce(!usr.isNull(), "The specified user name is not registered.");
-		return usr;
+		return usr.get;
 	}
 
 	override User getUserByEmail(string email)
