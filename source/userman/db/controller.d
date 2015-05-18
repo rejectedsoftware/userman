@@ -19,13 +19,14 @@ import vibe.stream.memory;
 import vibe.templ.diet;
 import vibe.utils.validation;
 
-import std.algorithm;
 import std.array;
 import std.datetime;
 import std.exception;
 import std.random;
 import std.string;
 
+public import userman.web.user;
+public import userman.web.group;
 
 UserManController createUserManController(UserManSettings settings)
 {
@@ -222,40 +223,6 @@ class UserManController {
 	abstract void addGroup(string name, string description);
 	abstract Group getGroup(Group.ID id);
 	abstract Group getGroupByName(string name);
-}
-
-struct User {
-	alias .ID!User ID;
-	@(.name("_id")) ID id;
-	bool active;
-	bool banned;
-	string name;
-	string fullName;
-	string email;
-	Group.ID[] groups;
-	string activationCode;
-	string resetCode;
-	SysTime resetCodeExpireTime;
-	AuthInfo auth;
-	Json[string] properties;
-
-	bool isInGroup(Group.ID group) const { return groups.countUntil(group) >= 0; }
-}
-
-struct AuthInfo {
-	string method = "password";
-	string passwordHash;
-	string token;
-	string secret;
-	string info;
-}
-
-struct Group {
-	alias .ID!Group ID;
-	@(.name("_id")) ID id;
-	string name;
-	string description;
-	@optional Json[string] properties;
 }
 
 

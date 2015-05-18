@@ -1,0 +1,8 @@
+userman
+
+.dub/
+*.o
+*.obj
+
+docs.json
+__dummy.html
