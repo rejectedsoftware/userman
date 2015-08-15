@@ -8,3 +8,5 @@ authentication or to manage user accounts.
 
 A major revision of the source code is currently underway. More instructions
 will be added in that process.
+
+[![Build Status](https://travis-ci.org/rejectedsoftware/userman.svg?branch=master)](https://travis-ci.org/rejectedsoftware/userman)
