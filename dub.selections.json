@@ -1,12 +1,12 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"memutils": "~master",
 		"libevent": "2.0.1+2.0.16",
-		"vibe-d": "0.7.23-rc.1",
-		"backtrace-d": "~master",
-		"openssl": "1.1.4+1.0.1g",
 		"libev": "5.0.0+4.04",
-		"libasync": "0.7.0"
+		"openssl": "1.1.4+1.0.1g",
+		"memutils": "0.4.1",
+		"vibe-d": "0.7.24",
+		"backtrace-d": "~master",
+		"libasync": "0.7.5"
 	}
 }
