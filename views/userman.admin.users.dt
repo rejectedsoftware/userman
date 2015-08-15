@@ -1,0 +1,24 @@
+extends userman.layout
+
+block title
+	- string title = "Users - UserMan Admin Interface";
+	
+block userman.content
+	- import std.algorithm : min, max;
+	table
+		tr
+			th& Username
+			th& E-mail
+			th& Full name
+		- foreach (u; info.users)
+			tr
+				td
+					a(href="./#{u.id}/")= u.name
+				td= u.email
+				td= u.fullName
+
+	a(href="?page=1")& First&nbsp;
+	- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
+		a(href="?page=#{i}")= i
+		| &nbsp;
+	a(href="?page=info.pageCount")& Last
