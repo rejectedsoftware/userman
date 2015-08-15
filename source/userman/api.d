@@ -49,6 +49,12 @@ interface UserManAPI {
 
 /// Interface suitable for manipulating user information
 interface UserManUserAPI {
+	/// Gets the total number of registered users.
+	@property long count();
+
+	/// Tests a username/e-mail and password combination for validity.
+	User.ID testLogin(string name, string password);
+
 	/// Registers a new user.
 	User.ID register(string email, string name, string full_name, string password);
 
@@ -82,9 +88,6 @@ interface UserManUserAPI {
 	/// Gets information about a range of users, suitable for pagination.
 	User[] get(int first_user, int max_count);
 
-	/// Gets the total number of registered users.
-	long getCount();
-
 	/// Deletes a user account.
 	void remove(User.ID id);
 	//void update(in ref User user);
@@ -108,11 +111,20 @@ interface UserManGroupAPI {
 	void create(string name, string description);
 
 	/// Gets information about an existing group.
-	Group get(Group.ID id);
+	//Group getByID(Group.ID id);
 
 	/// Gets information about a group using its name as the identifier.
-	Group getByName(string q);
+	Group get(string id);
+
+	/// Adds a user to a group.
+	void addMember(string id, User.ID user_id);
+
+	/// Removes a user from a group.
+	void removeMember(string id, User.ID user_id);
 }
+
+alias Group = userman.db.controller.Group;
+alias User = userman.db.controller.User;
 
 private class UserManAPIImpl : UserManAPI {
 	private {
@@ -140,6 +152,18 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	this(UserManController ctrl)
 	{
 		m_ctrl = ctrl;
+	}
+
+	@property long count()
+	{
+		return m_ctrl.getUserCount();
+	}
+
+	User.ID testLogin(string name, string password)
+	{
+		auto ret = m_ctrl.testLogin(name, password);
+		enforceHTTP(!ret.isNull, HTTPStatus.unauthorized, "Wrong user name or password.");
+		return ret;
 	}
 
 	User.ID register(string email, string name, string full_name, string password)
@@ -199,11 +223,6 @@ private class UserManUserAPIImpl : UserManUserAPI {
 		return ret;
 	}
 
-	long getCount()
-	{
-		return m_ctrl.getUserCount();
-	}
-
 	void remove(User.ID id)
 	{
 		m_ctrl.deleteUser(id);
@@ -247,14 +266,24 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 		return m_ctrl.addGroup(name, description);
 	}
 
-	Group get(Group.ID id)
+	/*Group getByID(Group.ID id)
+	{
+		return m_ctrl.getGroup(id);
+	}*/
+
+	Group get(string id)
 	{
 		return m_ctrl.getGroup(id);
 	}
 
-	Group getByName(string q)
+	void addMember(string id, User.ID user_id)
 	{
-		return m_ctrl.getGroupByName(q);
+		m_ctrl.addGroupMember(id, user_id);
+	}
+
+	void removeMember(string id, User.ID user_id)
+	{
+		m_ctrl.removeGroupMember(id, user_id);
 	}
 }
 

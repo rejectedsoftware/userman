@@ -134,27 +134,30 @@ class MongoUserManController : UserManController {
 		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}
 	
-	override void addGroup(string name, string description)
+	override void addGroup(string id, string description)
 	{
-		enforce(m_groups.findOne(["name": name]).isNull(), "A group with this name already exists.");
+		enforce(isValidGroupID(id), "Invalid group ID.");
+		enforce(m_groups.findOne(["id": id]).isNull(), "A group with this name already exists.");
 		auto grp = new Group;
-		grp.id = Group.ID(BsonObjectID.generate());
-		grp.name = name;
+		grp.id = id;
 		grp.description = description;
 		m_groups.insert(grp);
 	}
 
-	override Group getGroup(Group.ID id)
-	{
-		auto grp = m_groups.findOne!Group(["_id": id.bsonObjectIDValue]);
-		enforce(!grp.isNull(), "The specified group id is invalid.");
-		return grp;
-	}
-
-	override Group getGroupByName(string name)
+	override Group getGroup(string name)
 	{
 		auto grp = m_groups.findOne!Group(["name": name]);
 		enforce(!grp.isNull(), "The specified group name is unknown.");
 		return grp;
+	}
+
+	override void addGroupMember(string group, User.ID user)
+	{
+		assert(false);
+	}
+
+	override void removeGroupMember(string group, User.ID user)
+	{
+		assert(false);
 	}
 }

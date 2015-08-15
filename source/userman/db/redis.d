@@ -30,14 +30,15 @@ class RedisUserManController : UserManController {
 		RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging) m_users;
 		RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none) m_userAuthInfo;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_userProperties;
-		RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging) m_groups;
+		RedisObjectCollection!(RedisStripped!(Group, false), RedisCollectionOptions.supportPaging) m_groups;
 		RedisCollection!(RedisHash!string, RedisCollectionOptions.none) m_groupProperties;
 		//RedisCollection!(RedisSet!GroupMember, RedisCollectionOptions.none) m_groupMembers;
 
 		// secondary indexes
 		RedisHash!(long) m_usersByName;
 		RedisHash!(long) m_usersByEmail;
-		//RedisHash!(long) m_userGroups;
+		RedisCollection!(RedisSet!long, RedisCollectionOptions.none) m_userMemberships;
+		//RedisHash!(long[]) m_userMemberships;
 		RedisHash!long m_groupsByName;
 	}
 	
@@ -71,10 +72,12 @@ class RedisUserManController : UserManController {
 		m_users = RedisObjectCollection!(RedisStripped!User, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:user");
 		m_userAuthInfo = RedisObjectCollection!(AuthInfo, RedisCollectionOptions.none)(m_redisDB, "userman:user", "auth");
 		m_userProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:user", "properties");
-		m_groups = RedisObjectCollection!(RedisStripped!Group, RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
+		m_groups = RedisObjectCollection!(RedisStripped!(Group, false), RedisCollectionOptions.supportPaging)(m_redisDB, "userman:group");
 		m_groupProperties = RedisCollection!(RedisHash!string, RedisCollectionOptions.none)(m_redisDB, "userman:group", "properties");
+		//m_groupMembers = RedisCollection!(RedisSet!GroupMember, RedisCollectionOptions.none)(m_redisDB, "userman:group", "members");
 		m_usersByName = RedisHash!long(m_redisDB, "userman:user:byName");
 		m_usersByEmail = RedisHash!long(m_redisDB, "userman:user:byEmail");
+		//m_userMemberships = RedisCollection!(RedisSet!long, RedisCollectionOptions.none)(m_redisDB, "userman:user", "memberships");
 		m_groupsByName = RedisHash!long(m_redisDB, "userman:group:byName");
 	}
 
@@ -117,8 +120,8 @@ class RedisUserManController : UserManController {
 			props[name] = value.toString();
 
 		// Group membership
-		foreach(Group.ID gid; usr.groups)
-			m_redisDB.sadd("userman:group:" ~ gid ~ ":members", uid);
+		foreach(string gid; usr.groups)
+			addGroupMember(gid, User.ID(uid));
 
 		return usr.id;
 	}
@@ -130,10 +133,10 @@ class RedisUserManController : UserManController {
 
 		// Group membership
 		// TODO: avoid going over all (potentially large number of) groups
-		Group.ID[] groups;
+		string[] groups;
 		foreach (gid, grp; m_groups)
 			if (m_redisDB.sisMember("userman:group:" ~ gid.to!string ~ ":members", id))
-				groups ~= Group.ID(gid);
+				groups ~= grp.id;
 
 		// Credentials
 		auto auth = m_userAuthInfo[id.longValue];
@@ -208,8 +211,8 @@ class RedisUserManController : UserManController {
 		m_userProperties[user_id.longValue].value.remove();
 
 		// Group membership
-		foreach(Group.ID gid; usr.groups)
-			m_redisDB.srem("userman:group:" ~ gid ~ ":members", user_id);
+		foreach(string gid; usr.groups)
+			removeGroupMember(gid, user_id);
 	}
 
 	override void updateUser(in ref User user)
@@ -247,10 +250,10 @@ class RedisUserManController : UserManController {
 
 		// Group membership
 		foreach (gid, grp; m_groups) {
-			if (user.isInGroup(Group.ID(gid)))
-				m_redisDB.sadd("userman:group:" ~ gid.to!string ~ ":members", user.id);
+			if (user.isInGroup(grp.id))
+				addGroupMember(grp.id, user.id);
 			else
-				m_redisDB.srem("userman:group:" ~ gid.to!string ~ ":members", user.id);
+				removeGroupMember(grp.id, user.id);
 		}
 	}
 	
@@ -293,45 +296,56 @@ class RedisUserManController : UserManController {
 		m_userProperties[user.longValue][name] = Bson(value).toString();
 	}
 	
-	override void addGroup(string name, string description)
+	override void addGroup(string id, string description)
 	{
+		enforce(isValidGroupID(id), "Invalid group ID.");
+
 		// TODO: avoid iterating over all groups!
-		foreach (id, grp; m_groups) {
-			enforce(grp.name != name, "A group with this name already exists.");
+		foreach (gid, grp; m_groups) {
+			enforce(grp.id != grp.id, "A group with this name already exists.");
 		}
 
 		// Add Group
 		long groupId = m_groups.createID();
 		Group grp = {
-			id: Group.ID(groupId), 
-			name: name, 
+			id: id,
 			description: description
 		};
 
-		m_groups[groupId] = grp.redisStrip();
+		m_groups[groupId] = grp.redisStrip!false();
 		foreach (k, v; grp.properties)
 			m_groupProperties[groupId][k] = v.toString();
 
-		m_groupsByName[name] = groupId;
+		m_groupsByName[id] = groupId;
 	}
 
-	override Group getGroup(Group.ID id)
+	override Group getGroup(string name)
 	{
-		auto sgrp = m_groups[id.longValue];
+		auto grpid = m_groupsByName.get(name, -1);
+		enforce(grpid != -1, "The specified group name is unknown.");
+
+		auto sgrp = m_groups[grpid];
 		enforce(sgrp.exists, "The specified group id is invalid.");
 
 		// Properties
 		Json[string] properties;
-		foreach(string name, string value; m_groupProperties[id.longValue])
+		foreach(string name, string value; m_groupProperties[grpid])
 			properties[name] = parseJsonString(value);
 
-		return sgrp.unstrip(id, properties);
+		return sgrp.unstrip(properties);
 	}
 
-	override Group getGroupByName(string name)
+	override void addGroupMember(string group, User.ID user)
 	{
-		auto grpid = m_groupsByName.get(name, -1);
+		auto grpid = m_groupsByName.get(group, -1);
 		enforce(grpid != -1, "The specified group name is unknown.");
-		return getGroup(Group.ID(grpid));
+		m_redisDB.sadd("userman:group:" ~ grpid.to!string ~ ":members", user);
+	}
+
+	override void removeGroupMember(string group, User.ID user)
+	{
+		auto grpid = m_groupsByName.get(group, -1);
+		enforce(grpid != -1, "The specified group name is unknown.");
+		m_redisDB.srem("userman:group:" ~ grpid.to!string ~ ":members", user);
 	}
 }

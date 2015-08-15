@@ -48,8 +48,7 @@ class FileUserManController : UserManController {
 	private final Path userByNameFile(string name) { return m_basePath ~ "user/byName/" ~ (urlEncode(name) ~ ".json"); }
 	private final Path userByEmailFile(string email) { return m_basePath ~ "user/byEmail/" ~ (urlEncode(email) ~ ".json"); }
 	private final Path userFile(User.ID id) { return m_basePath ~ "user/" ~ (id.toString() ~ ".json"); }
-	private final Path groupByNameFile(string name) { return m_basePath ~ "group/byName/" ~ (urlEncode(name) ~ ".json"); }
-	private final Path groupFile(Group.ID id) { return m_basePath ~ "group/" ~ (id.toString() ~ ".json"); }
+	private final Path groupFile(string id) in { assert(isValidGroupID(id)); } body { return m_basePath ~ ("group/" ~ id ~ ".json"); }
 	
 	override User.ID addUser(ref User usr)
 	{
@@ -194,26 +193,30 @@ class FileUserManController : UserManController {
 		updateUser(usr);
 	}
 	
-	override void addGroup(string name, string description)
+	override void addGroup(string id, string description)
 	{
-		enforce(!existsFile(groupByNameFile(name)), "A group with this name already exists.");
+		enforce(isValidGroupID(id), "Invalid group ID.");
+		enforce(!existsFile(groupFile(id)), "A group with this name already exists.");
 
 		Group grp;
-		grp.id = Group.ID(randomUUID);
-		grp.name = name;
+		grp.id = id;
 		grp.description = description;
 		writeFileUTF8(groupFile(grp.id), serializeToJsonString(grp));
-		writeFileUTF8(groupByNameFile(grp.name), serializeToJsonString(grp.id.toString()));
 	}
 
-	override Group getGroup(Group.ID id)
+	override Group getGroup(string id)
 	{
 		return readFileUTF8(groupFile(id)).deserializeJson!Group;
 	}
 
-	override Group getGroupByName(string name)
+	override void addGroupMember(string group, User.ID user)
 	{
-		return getGroup(readFileUTF8(groupByNameFile(name)).deserializeJson!(Group.ID));
+		assert(false);
+	}
+
+	override void removeGroupMember(string group, User.ID user)
+	{
+		assert(false);
 	}
 }
 

@@ -25,6 +25,7 @@ import std.datetime;
 import std.exception;
 import std.random;
 import std.string;
+import std.typecons : Nullable;
 
 
 UserManController createUserManController(UserManSettings settings)
@@ -125,6 +126,14 @@ class UserManController {
 		}
 	}
 
+	Nullable!(User.ID) testLogin(string name, string password)
+	{
+		auto user = getUserByEmailOrName(name);
+		if (testSimplePasswordHash(user.auth.passwordHash, password))
+			return Nullable!(User.ID)(user.id);
+		return Nullable!(User.ID).init;
+	}
+
 	void activateUser(string email, string activation_code)
 	{
 		email = email.toLower();
@@ -219,9 +228,33 @@ class UserManController {
 	abstract void setPassword(User.ID user, string password);
 	abstract void setProperty(User.ID user, string name, string value);
 
-	abstract void addGroup(string name, string description);
-	abstract Group getGroup(Group.ID id);
-	abstract Group getGroupByName(string name);
+	abstract void addGroup(string id, string description);
+	abstract Group getGroup(string id);
+	abstract void addGroupMember(string group, User.ID user);
+	abstract void removeGroupMember(string group, User.ID user);
+	deprecated Group getGroupByName(string id) { return getGroup(id); }
+
+	/** Test a group ID for validity.
+
+		Valid group IDs consist of one or more dot separated identifiers, where
+		each idenfifiers must contain only ASCII alphanumeric characters or
+		underscores. Each identifier must begin with an alphabetic or underscore
+		character.
+	*/
+	static bool isValidGroupID(string name)
+	{
+		import std.ascii : isAlpha, isDigit;
+		import std.algorithm : splitter;
+
+		if (name.length < 1) return false;
+		foreach (p; name.splitter('.')) {
+			if (p.length < 0) return false;
+			if (!p[0].isAlpha && p[0] != '_') return false;
+			if (p.canFind!(ch => !ch.isAlpha && !ch.isDigit && ch != '_'))
+				return false;
+		}
+		return true;
+	}
 }
 
 struct User {
@@ -232,14 +265,14 @@ struct User {
 	string name;
 	string fullName;
 	string email;
-	Group.ID[] groups;
+	string[] groups;
 	string activationCode;
 	string resetCode;
 	SysTime resetCodeExpireTime;
 	AuthInfo auth;
 	Json[string] properties;
 
-	bool isInGroup(Group.ID group) const { return groups.countUntil(group) >= 0; }
+	bool isInGroup(string group) const { return groups.countUntil(group) >= 0; }
 }
 
 struct AuthInfo {
@@ -251,9 +284,7 @@ struct AuthInfo {
 }
 
 struct Group {
-	alias .ID!Group ID;
-	@(.name("_id")) ID id;
-	string name;
+	string id;
 	string description;
 	@optional Json[string] properties;
 }
