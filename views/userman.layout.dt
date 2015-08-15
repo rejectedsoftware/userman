@@ -1,4 +1,7 @@
 extends layout
 
+block head
+	link(rel="stylesheet", href="#{req.rootDir}styles/userman.css")
+
 block body
 	block userman.content
