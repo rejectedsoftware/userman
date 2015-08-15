@@ -211,12 +211,20 @@ class FileUserManController : UserManController {
 
 	override void addGroupMember(string group, User.ID user)
 	{
-		assert(false);
+		import std.algorithm : canFind;
+		auto usr = getUser(user);
+		if (!usr.groups.canFind(group))
+			usr.groups ~= group;
+		updateUser(usr);
 	}
 
 	override void removeGroupMember(string group, User.ID user)
 	{
-		assert(false);
+		import std.algorithm : countUntil;
+		auto usr = getUser(user);
+		auto idx = usr.groups.countUntil(group);
+		if (idx >= 0) usr.groups = usr.groups[0 .. idx] ~ usr.groups[idx+1 .. $];
+		updateUser(usr);
 	}
 }
 
