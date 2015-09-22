@@ -143,8 +143,9 @@ private class UserManWebAdminInterface {
 	}
 
 	@auth @path("/users/:user/") @errorDisplay!getUser
-	void postUser(AuthInfo auth, ...)
+	void postUser(AuthInfo auth)
 	{
+		// TODO!
 	}
 
 	@auth @path("/users/:user/set_property") @errorDisplay!getUser
