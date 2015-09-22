@@ -1,0 +1,4 @@
+.dub
+/testdb
+/*.dll
+/*.exe
