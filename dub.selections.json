@@ -5,7 +5,7 @@
 		"libev": "5.0.0+4.04",
 		"openssl": "1.1.4+1.0.1g",
 		"memutils": "0.4.1",
-		"vibe-d": "0.7.25-alpha.1",
+		"vibe-d": "0.7.25+commit.54.g010f7cb",
 		"backtrace-d": "~master",
 		"libasync": "0.7.5"
 	}

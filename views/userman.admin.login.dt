@@ -1,46 +1,51 @@
 extends userman.layout
 
 block title
-	- string title = "Log in - UserMan Admin Interface";
+	- string title = "Log in";
 	
-block userman.content
-	- if (first_user)
-		p& There are no users registered, yet. Please fill out the following form to create the initial administrator user:
+block body
+	center
+		.userman-logo-big
 
-		- if (error.length)
-			p.error= error
-		
-		form(action="initial_register", method="POST")
-			input(type="hidden", name="redirect", value=req.form.get("redirect", "/"))
-			.formRow
-				label(for="regname")& Username:
-				input#regname(name="username", type="text", value=req.form.get("username", ""))
-			.formRow
-				label(for="regemail")& E-Mail:
-				input#regemail(name="email", type="text", value=req.form.get("email", ""))
-			.formRow
-				label(for="regfullname")& Full name:
-				input#regfullname(name="full_name", type="text", value=req.form.get("full_name", ""))
-			.formRow
-				label(for="password")& Password:
-				input#password(name="password", type="password")
-			.formRow
-				label(for="password_confirmation")& Password confirmation:
-				input#password_confirmation(name="password_confirmation", type="password")
-			.formRow
-				button(type="submit")& Register
+		h1 UserMan Administrator Login
 
-	- else
-		- if (error.length)
-			p.error= error
+		- if (first_user)
+			p& There are no users registered, yet. Please fill out the following form to create the initial administrator user:
 
-		form(action="login", method="POST")
-			input(type="hidden", name="redirect", value=req.form.get("redirect", "/"))
-			.formRow
-				label(for="name")& Username/E-Mail:
-				input#name(name="name", type="text", value=req.form.get("email", ""))
-			.formRow
-				label(for="password")& Password:
-				input#password(name="password", type="password")
-			.formRow
-				button(type="submit")& Log in
+			- if (error.length)
+				p.error= error
+			
+			form.initial-login-form(action="initial_register", method="POST")
+				input(type="hidden", name="redirect", value=redirect)
+				.formRow
+					label(for="regname")& Username
+					input#regname(name="username", type="text", value=req.form.get("username", ""))
+				.formRow
+					label(for="regemail")& E-Mail
+					input#regemail(name="email", type="text", value=req.form.get("email", ""))
+				.formRow
+					label(for="regfullname")& Full name
+					input#regfullname(name="full_name", type="text", value=req.form.get("full_name", ""))
+				.formRow
+					label(for="password")& Password
+					input#password(name="password", type="password")
+				.formRow
+					label(for="password_confirmation")& Password confirmation
+					input#password_confirmation(name="password_confirmation", type="password")
+				.formRow
+					button(type="submit")& Register
+
+		- else
+			- if (error.length)
+				p.error= error
+
+			form.login-form(action="login", method="POST")
+				input(type="hidden", name="redirect", value=redirect)
+				.formRow
+					label(for="name")& Username/E-Mail
+					input#name(name="name", type="text", value=req.form.get("email", ""))
+				.formRow
+					label(for="password")& Password
+					input#password(name="password", type="password")
+				.formRow
+					button(type="submit")& Log in

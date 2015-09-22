@@ -1,24 +1,89 @@
-extends userman.layout
+extends userman.admin.layout
 
 block title
-	- string title = "Users - UserMan Admin Interface";
-	
-block userman.content
-	- import std.algorithm : min, max;
-	table
-		tr
-			th& Username
-			th& E-mail
-			th& Full name
-		- foreach (u; info.users)
-			tr
-				td
-					a(href="./#{u.id}/")= u.name
-				td= u.email
-				td= u.fullName
+	- string title = "Users";
 
-	a(href="?page=1")& First&nbsp;
-	- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
-		a(href="?page=#{i}")= i
-		| &nbsp;
-	a(href="?page=info.pageCount")& Last
+block userman.navigation
+	ul
+		li
+			a(href="../")& Overview
+
+block userman.content
+
+	- if (info.error.length)
+		p.error= info.error
+
+	h2& User list
+
+	form(method="POST", action="users/multi")
+		table
+			tr
+				th &nbsp;
+				th& Username
+				th& Display name
+				th& E-mail
+			- foreach (u; info.users)
+				tr
+					td(class='status-#{u.banned?"banned":u.active?"active":"inactive"}')
+						input(type="checkbox", name="selection", value=u.id)
+					td
+						a(href="#{req.rootDir}users/#{u.id}/")= u.name
+					td= u.fullName
+					td= u.email
+			tr
+				td.selindicator
+				td(colspan=3)
+					button(name="action", value="ban")& Ban
+					button(name="action", value="unban")& Unban
+					button(name="action", value="activate")& Activate
+					button(name="action", value="deactivate")& Deactivate
+					button(name="action", value="sendActivation")& Send activation mail
+					button(name="action", value="delete")& Delete
+
+	- if (info.pageCount > 1)
+		- import std.algorithm : min, max;
+		a(href="?page=1")& First&nbsp;
+		- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
+			- if (i == info.page)
+				|= i
+			- else
+				a(href="?page=#{i}")= i
+			| &nbsp;
+		a(href="?page=info.pageCount")& Last
+
+	- if (info.page == 1)
+		h2& Create user
+
+		form(method="POST", action="users")
+			table
+				colgroup
+					col.propname
+				tr
+					th
+						label(for="create-name")& Username
+					td
+						input#create-name(type="text", name="name")
+				tr
+					th
+						label(for="create-full-name")& Display name
+					td
+						input#create-full-name(type="text", name="full_name")
+				tr
+					th
+						label(for="create-email")& E-Mail
+					td
+						input#create-email(type="email", name="email")
+				tr
+					th
+						label(for="create-password")& Password
+					td
+						input#create-password(type="password", name="password")
+				tr
+					th
+						label(for="create-password")& Confirm password
+					td
+						input#create-password(type="password", name="password_confirmation")
+				tr
+					th &nbsp;
+					td
+						button(type="submit")& Create user

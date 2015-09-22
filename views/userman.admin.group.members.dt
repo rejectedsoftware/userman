@@ -1,0 +1,44 @@
+extends userman.admin.layout
+
+block title
+	- string title = "Group "~info.group.id~" members";
+	
+block userman.navigation
+	ul
+		li
+			a(href="../../../")& Overview
+		li
+			a(href="../../")& Groups
+		li
+			a(href="../")= info.group.id
+
+block userman.content
+	- import std.algorithm : min, max;
+	table
+		tr
+			th& Username
+			th& E-mail
+			th& Full name
+			th& Action
+		- foreach (u; info.members)
+			tr
+				td
+					a(href="#{req.rootDir}users/#{u.id}/")= u.name
+				td= u.email
+				td= u.fullName
+				td
+					button(type="submit") Remove
+		tr
+			td
+				input(type="text", name="username")
+			td &nbsp;
+			td &nbsp;
+			td
+				button(type="submit") Add
+
+	- if (info.pageCount > 1)
+		a(href="?page=1")& First&nbsp;
+		- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
+			a(href="?page=#{i}")= i
+			| &nbsp;
+		a(href="?page=info.pageCount")& Last

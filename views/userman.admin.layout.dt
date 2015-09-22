@@ -1,0 +1,26 @@
+extends layout
+
+block head
+	link(rel="stylesheet", href="#{req.rootDir}styles/userman.css")
+	block userman.title
+	- if (title.length) title ~= " - ";
+	- title ~= "UserMan Admin Interface";
+
+block body
+	header
+		.logo
+		h1= title
+		- if (req.session && req.session.isKeySet("authUser"))
+			p Logged in as #{req.session.get!string("authUserDisplayName")} - <a href="#{req.rootDir}logout">Log out</a>
+		- else
+			p Not logged in - <a href="#{req.rootDir}login">Log in</a>
+
+	nav
+		block userman.navigation
+
+
+	#content
+		block userman.content
+
+	footer
+		p& Copyright &copy; 2015 rejectedsoftware e.K. This software is distributed under the terms of the GNU General Public License Version 3.

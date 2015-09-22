@@ -1,0 +1,47 @@
+extends userman.admin.layout
+
+block title
+	- string title = "Group "~info.group.id;
+	
+block userman.navigation
+	ul
+		li
+			a(href="../../")& Overview
+		li
+			a(href="../")& Groups
+
+block userman.content
+	- import std.algorithm : sort;
+
+	h2& General
+
+	p& Name of this group: #{info.group.id}
+	p& The group has #{info.memberCount} members.
+		a(href="members/")& View members.
+
+	form(method="", action="")
+		label(for="description")& Group description:
+		input#description(type="text", name="description", value=info.group.description)
+		button(type="submit") Apply;
+
+	h2& Properties
+	table
+		tr
+			th& Name
+			th& Value (JSON)
+			th& Action
+		- foreach (n; info.group.properties.byKey.array.sort())
+			tr
+				td= n
+				td
+					input(type="text", name="properties[#{n}]", value=info.group.properties[n]);
+				td
+					button(type="sumbit") Set
+		tr
+			td
+				input(type="text")
+			td
+				input(type="text")
+			td
+				button(type="submit") Add
+

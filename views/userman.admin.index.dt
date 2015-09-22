@@ -1,11 +1,13 @@
-extends userman.layout
+extends userman.admin.layout
 
 block title
-	- string title = "UserMan Admin Interface";
+	- string title = "";
 	
 block userman.content
-	ul
+	ul.main-nav
 		li
-			a(href="users/") Users
+			a(href="users/")& Users
 		li
-			a(href="groups/") Groups
+			a(href="groups/")& Groups
+		li
+			a(href="settings/")& Settings

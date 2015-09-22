@@ -36,6 +36,7 @@ private class UserManWebAdminInterface {
 		UserManAPI m_api;
 		int m_entriesPerPage = 50;
 		SessionVar!(User.ID, "authUser") m_authUser;
+		SessionVar!(string, "authUserDisplayName") m_authUserDisplayName;
 	}
 
 	this(UserManAPI api)
@@ -43,11 +44,11 @@ private class UserManWebAdminInterface {
 		m_api = api;
 	}
 
-	void getLogin(string _error = null)
+	void getLogin(string redirect = "/", string _error = null)
 	{
 		bool first_user = m_api.users.count == 0;
 		string error = _error;
-		render!("userman.admin.login.dt", first_user, error);
+		render!("userman.admin.login.dt", first_user, error, redirect);
 	}
 
 	@errorDisplay!getLogin
@@ -62,8 +63,10 @@ private class UserManWebAdminInterface {
 
 		auto user = m_api.users.get(uid);
 		enforce(user.active, "The account is not yet activated.");
+		enforce(user.groups.canFind(adminGroupName), "User is not an administrator.");
 
 		m_authUser = user.id;
+		m_authUserDisplayName = user.fullName;
 		.redirect(redirect);
 	}
 
@@ -93,37 +96,131 @@ private class UserManWebAdminInterface {
 	}
 
 	@auth
-	void getUsers(AuthInfo auth, int page = 1)
+	void getUsers(AuthInfo auth, int page = 1, string _error = null)
 	{
 		static struct Info {
 			User[] users;
 			int pageCount;
 			int page;
+			string error;
 		}
 
 		Info info;
 		info.page = page;
 		info.pageCount = ((m_api.users.count + m_entriesPerPage - 1) / m_entriesPerPage).to!int;
-		info.users = m_api.users.get((page-1) * m_entriesPerPage, m_entriesPerPage);
+		info.users = m_api.users.getRange((page-1) * m_entriesPerPage, m_entriesPerPage);
+		info.error = _error;
 		render!("userman.admin.users.dt", info);
 	}
 
+	@auth @errorDisplay!getUsers
+	void postUsers(AuthInfo auth, ValidUsername name, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation)
+	{
+		m_api.users.register(email, name, full_name, password);
+		redirect("users");
+	}
+
+	@auth @path("/users/multi") @errorDisplay!getUsers
+	void postMultiUserUpdate(AuthInfo auth, string action, HTTPServerRequest req, /*User.ID[] selection,*/ int page = 1)
+	{
+		import std.algorithm : map;
+		foreach (u; /*selection*/req.form.getAll("selection").map!(id => User.ID.fromString(id)))
+			performAction(u, action);
+		redirect(page > 1 ? "/users?page="~page.to!string : "/users");
+	}
+
+	@auth @path("/users/:user/")
+	void getUser(AuthInfo auth, User.ID _user, string _error = null)
+	{
+		static struct Info {
+			User user;
+			string error;
+		}
+		Info info;
+		info.user = m_api.users.get(_user);
+		info.error = _error;
+		render!("userman.admin.user.dt", info);
+	}
+
+	@auth @path("/users/:user/") @errorDisplay!getUser
+	void postUser(AuthInfo auth, ...)
+	{
+	}
+
+	@auth @path("/users/:user/set_property") @errorDisplay!getUser
+	void postSetUserProperty(AuthInfo auth, User.ID _user, Nullable!string old_name, string name, string value)
+	{
+		import vibe.data.json : parseJson;
+
+		if (!old_name.isNull() && old_name != name)
+			m_api.users.removeProperty(_user, old_name);
+		if (name.length) m_api.users.setProperty(_user, name, parseJson(value));
+		redirect("./");
+	}
+
 	@auth
-	void getGroups(AuthInfo auth, int page = 1)
+	void getGroups(AuthInfo auth, long page = 1)
 	{
 		static struct Info {
 			Group[] groups;
-			int pageCount;
-			int page;
+			long pageCount;
+			long page;
 		}
 
 		Info info;
 		info.page = page;
-		//info.pageCount = ((m_api.users.count + m_entriesPerPage - 1) / m_entriesPerPage).to!int;
-		//info.groups = m_api.groups.get((page-1) * m_entriesPerPage, m_entriesPerPage);
+		info.pageCount = (m_api.groups.count + m_entriesPerPage - 1) / m_entriesPerPage;
+		info.groups = m_api.groups.getRange((page-1) * m_entriesPerPage, m_entriesPerPage);
 		render!("userman.admin.groups.dt", info);
 	}
 
+	@auth @path("/groups/:group/")
+	void getGroup(AuthInfo auth, string _group)
+	{
+		static struct Info {
+			Group group;
+			long memberCount;
+		}
+		Info info;
+		info.group = m_api.groups.get(_group);
+		info.memberCount = m_api.groups.getMemberCount(_group);
+		render!("userman.admin.group.dt", info);
+	}
+
+	@auth @path("/groups/:group/members/")
+	void getGroupMembers(AuthInfo auth, string _group, long page = 1)
+	{
+		import std.algorithm : map;
+		import std.array : array;
+
+		static struct Info {
+			Group group;
+			User[] members;
+			long page;
+			long pageCount;
+		}
+		Info info;
+		info.group = m_api.groups.get(_group);
+		info.page = page;
+		info.pageCount = ((m_api.groups.count + m_entriesPerPage - 1) / m_entriesPerPage).to!int;
+		info.members = m_api.groups.getMemberRange(_group, (page-1) * m_entriesPerPage, m_entriesPerPage)
+			.map!(id => m_api.users.get(id))
+			.array;
+		render!("userman.admin.group.members.dt", info);
+	}
+
+	private void performAction(User.ID user, string action)
+	{
+		switch (action) {
+			default: throw new Exception("Unknown action: "~action);
+			case "activate": m_api.users.setActive(user, true); break;
+			case "deactivate": m_api.users.setActive(user, false); break;
+			case "ban": m_api.users.setBanned(user, true); break;
+			case "unban": m_api.users.setBanned(user, false); break;
+			case "remove": m_api.users.remove(user); break;
+			case "sendActivation": m_api.users.resendActivation(user); break;
+		}
+	}
 
 	mixin PrivateAccessProxy;
 	enum auth = before!handleAuth("auth");

@@ -1,8 +1,13 @@
-extends userman.layout
+extends userman.admin.layout
 
 block title
-	- string title = "Groups - UserMan Admin Interface";
+	- string title = "Groups";
 	
+block userman.navigation
+	ul
+		li
+			a(href="../")& Overview
+
 block userman.content
 	- import std.algorithm : min, max;
 	table
@@ -12,11 +17,12 @@ block userman.content
 		- foreach (g; info.groups)
 			tr
 				td
-					a(href="./#{g.id}/")= g.id
+					a(href="#{req.rootDir}groups/#{g.id}/")= g.id
 				td= g.description
 
-	a(href="?page=1")& First&nbsp;
-	- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
-		a(href="?page=#{i}")= i
-		| &nbsp;
-	a(href="?page=info.pageCount")& Last
+	- if (info.pageCount > 1)
+		a(href="?page=1")& First&nbsp;
+		- foreach (i; max(1, info.page-3) .. min(info.pageCount, info.page+4))
+			a(href="?page=#{i}")= i
+			| &nbsp;
+		a(href="?page=info.pageCount")& Last

@@ -1,6 +1,181 @@
+/***********/
+/* GENERAL */
+/******************************************************************************/
+
 body {
-	font-family: sans-serif;
+	font-family: "Segoe UI", "Open Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 	font-size: 10pt;
+	padding: 0;
+	margin: 0;
+	bottom: 0;
 }
 
 .error { color: red; }
+
+table, .table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 10pt;
+}
+
+td, th, .td, .th {
+	border: 1px solid #bbb;
+	padding: 2.5pt 5pt;
+	text-align: left;
+}
+
+th, .th {
+	background-color: #eee;
+	background: linear-gradient(#e8dfdd, #d8cfcb);
+	font-weight: normal;
+}
+
+.table { display: table; }
+.tr { display: table-row; }
+.td { display: table-cell; }
+.th { display: table-cell; }
+.colgroup { display: table-column-group; }
+.col { display: table-column; }
+
+td input, .td input { width: 100%; }
+col.propname, .col.propname { width: 150pt; max-width: 40%; }
+td.selindicator { text-align: center; background-color: #eee; }
+td.selindicator:before { content: "╚>"; }
+
+
+/*********/
+/* LOGIN */
+/******************************************************************************/
+
+.userman-logo-big {
+	width: 256px;
+	height: 256px;
+	background-image: url(../images/logo-256.png)
+}
+
+.login-form label, .initial-login-form label {
+	display: block;
+}
+
+.login-form input, .initial-login-form input {
+	margin-bottom: 10pt;
+	text-align: center;
+}
+
+
+/*****************/
+/* HEADER/FOOTER */
+/******************************************************************************/
+
+header {
+	border-bottom: 1px solid #bbb;
+	margin-bottom: 0;
+	background: linear-gradient(#fff, #eee);
+}
+
+header .logo {
+	float: left;
+	width: 64px;
+	height: 64px;
+	margin-right: 10pt;
+	background-image: url(../images/logo-stand-64.png)
+}
+
+header h1 {
+	margin-bottom: 5pt;
+	padding: 0;
+}
+
+nav ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 5pt 10pt;
+	margin-bottom: 30pt;
+	background-color: #ddd;
+	border-bottom: 1px solid #bbb;
+}
+
+nav li {
+	display: inline-block;
+}
+
+nav a {
+	border: 1px solid #8ac;
+	padding: 2.5pt 10pt;
+	background: linear-gradient(#bef, #9bd);
+	color: black;
+	text-decoration: none;
+}
+nav a:hover { background: linear-gradient(#cff, #ace); }
+
+nav a:before { content: "« ";}
+
+footer {
+	margin-top: 30pt;
+	color: #888;
+	border-top: 1px solid #ddd;
+	background: linear-gradient(#efefef, #fff);
+	font-size: 9pt;
+}
+
+footer p {
+	text-align: center;
+}
+
+
+/***********/
+/* CONTENT */
+/******************************************************************************/
+
+#content {
+	padding: 10pt;
+	padding-top: 0;
+}
+
+ul.main-nav {
+	text-align: center;
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+ul.main-nav a {
+	display: block;
+	margin: 10pt 0;
+	background-color: #eee;
+	background: linear-gradient(#e8dfdd, #c8bfbb);
+	border: 1px solid #bbb;
+	padding: 10pt;
+	width: 200pt;
+	text-decoration: none;
+	font-weight: bold;
+	color: black;
+}
+
+ul.main-nav a:hover { background: linear-gradient(#f8efed, #d8cfcb); }
+
+
+.context-actions {
+	border: 1px solid #bbb;
+	display: inline-block;
+	padding: 5pt;
+	background-color: #f9f8f7;
+}
+
+.context-actions ul {
+	padding: 0;
+}
+
+.context-actions li {
+	list-style-type: none;
+}
+
+.context-actions button {
+	min-width: 200pt;
+	padding: 5pt;
+	margin: 0pt auto;
+}
+
+.status-active { background-color: #8e2; }
+.status-inactive { background-color: #bba; }
+.status-banned { background-color: #e64; }

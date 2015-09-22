@@ -1,0 +1,67 @@
+extends userman.admin.layout
+
+block title
+	- string title = "User "~info.user.name;
+
+block userman.navigation
+	ul
+		li
+			a(href="../../")& Overview
+		li
+			a(href="../")& Users
+
+block userman.content
+	- import std.algorithm : sort;
+
+	- if (info.error.length)
+		p.error= info.error
+
+	h2& General
+
+	form(method="POST", action="./")
+		table
+			colgroup
+				col.propname
+			tr
+				th
+					label(for="username")& User name
+				td
+					input#username(type="text", name="username", value=info.user.name)
+			tr
+				th
+					label(for="full_name")& Display name
+				td
+					input#full_name(type="text", name="full_name", value=info.user.fullName)
+			tr
+				th
+					label(for="email")& E-mail
+				td
+					input#email(type="text", name="email", value=info.user.email)
+		button(type="submit")& Apply
+
+
+	h2& Properties
+	.table
+		.colgroup
+			.col.propname
+		.tr
+			.th& Name
+			.th& Value (JSON)
+			.th& Action
+		- foreach (n; info.user.properties.byKey.array.sort())
+			form.tr(method="POST", action="set_property")
+				input(type="hidden", name="old_name", value=n)
+				.td
+					input(type="text", name="name", value=n)
+				.td
+					input(type="text", name="value", value=info.user.properties[n])
+				.td
+					button(type="sumbit") Set
+		form.tr(method="POST", action="set_property")
+			.td
+				input(type="text", name="name")
+			.td
+				input(type="text", name="value")
+			.td
+				button(type="submit") Add
+
