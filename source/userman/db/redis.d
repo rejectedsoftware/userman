@@ -117,7 +117,7 @@ class RedisUserManController : UserManController {
 		// Properties
 		auto props = m_userProperties[uid];
 		foreach (string name, value; usr.properties)
-			props[name] = value;
+			props[name] = value.toString();
 
 		// Group membership
 		foreach(string gid; usr.groups)
@@ -142,9 +142,9 @@ class RedisUserManController : UserManController {
 		auto auth = m_userAuthInfo[id.longValue];
 
 		// Properties
-		string[string] properties;
+		Json[string] properties;
 		foreach(string name, string value; m_userProperties[id.longValue])
-			properties[name] = value;
+			properties[name] = parseJsonString(value);
 
 		return susr.unstrip(id, groups, auth, properties);
 	}
@@ -246,7 +246,7 @@ class RedisUserManController : UserManController {
 		auto props = m_userProperties[user.id.longValue];
 		props.value.remove();
 		foreach (string name, value; user.properties)
-			props[name] = value;
+			props[name] = value.toString();
 
 		// Group membership
 		foreach (gid, grp; m_groups) {
@@ -289,11 +289,11 @@ class RedisUserManController : UserManController {
 		m_userAuthInfo[user.longValue] = auth;
 	}
 	
-	override void setProperty(User.ID user, string name, string value)
+	override void setProperty(User.ID user, string name, Json value)
 	{
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 
-		m_userProperties[user.longValue][name] = Bson(value).toString();
+		m_userProperties[user.longValue][name] = value.toString();
 	}
 	
 	override void removeProperty(User.ID user, string name)

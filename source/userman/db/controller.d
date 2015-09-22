@@ -57,7 +57,7 @@ class UserManController {
 
 	void validateUser(in ref User usr)
 	{
-		enforce(usr.name.length > 3, "User names must be at least 3 characters.");
+		enforce(usr.name.length >= 3, "User names must be at least 3 characters long.");
 		validateEmail(usr.email);
 	}
 	
@@ -226,7 +226,7 @@ class UserManController {
 	abstract void setEmail(User.ID user, string email);
 	abstract void setFullName(User.ID user, string full_name);
 	abstract void setPassword(User.ID user, string password);
-	abstract void setProperty(User.ID user, string name, string value);
+	abstract void setProperty(User.ID user, string name, Json value);
 	abstract void removeProperty(User.ID user, string name);
 
 	abstract void addGroup(string id, string description);
@@ -275,7 +275,7 @@ struct User {
 	string resetCode;
 	SysTime resetCodeExpireTime;
 	AuthInfo auth;
-	string[string] properties;
+	Json[string] properties;
 
 	bool isInGroup(string group) const { return groups.countUntil(group) >= 0; }
 }

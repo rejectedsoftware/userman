@@ -129,7 +129,7 @@ class MongoUserManController : UserManController {
 			["auth.method": "password", "auth.passwordHash": generateSimplePasswordHash(password)]]);
 	}
 
-	override void setProperty(User.ID user, string name, string value)
+	override void setProperty(User.ID user, string name, Json value)
 	{
 		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}

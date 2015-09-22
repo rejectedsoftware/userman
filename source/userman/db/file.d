@@ -186,7 +186,7 @@ class FileUserManController : UserManController {
 		updateUser(usr);
 	}
 	
-	override void setProperty(User.ID user, string name, string value)
+	override void setProperty(User.ID user, string name, Json value)
 	{
 		auto usr = getUser(user);
 		usr.properties[name] = value;

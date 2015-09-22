@@ -9,6 +9,7 @@ module userman.api;
 
 import userman.db.controller;
 
+import vibe.data.json : Json;
 import vibe.http.router;
 import vibe.web.rest;
 
@@ -101,8 +102,14 @@ interface UserManUserAPI {
 	/// Sets a new password.
 	void setPassword(User.ID id, string password);
 
+	/// Sets the activation state of a user.
+	void setActive(User.ID id, bool active);
+
+	/// Sets the banned state of a user.
+	void setBanned(User.ID id, bool banned);
+
 	/// Sets a custom user account property.
-	void setProperty(User.ID id, string name, string value);
+	void setProperty(User.ID id, string name, Json value);
 
 	/// Removes a user account property.
 	void removeProperty(User.ID id, string name);
@@ -259,8 +266,30 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	{
 		m_ctrl.setPassword(id, password);
 	}
+
+	void setActive(User.ID id, bool active)
+	{
+		// FIXME: efficiency and atomicity
+		auto usr = m_ctrl.getUser(id);
+		if (usr.active != active) {
+			usr.active = active;
+			m_ctrl.updateUser(usr);
+		}
+	}
+
+	void setBanned(User.ID id, bool banned)
+	{
+		// FIXME: efficiency and atomicity
+			import vibe.core.log; logInfo("DO ITMAYBE");
+		auto usr = m_ctrl.getUser(id);
+		if (usr.banned != banned) {
+			usr.banned = banned;
+			m_ctrl.updateUser(usr);
+			import vibe.core.log; logInfo("DO IT");
+		}
+	}
 	
-	void setProperty(User.ID id, string name, string value)
+	void setProperty(User.ID id, string name, Json value)
 	{
 		m_ctrl.setProperty(id, name, value);
 	}
