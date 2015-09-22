@@ -86,7 +86,7 @@ interface UserManUserAPI {
 	User getByEmailOrName(string q);
 
 	/// Gets information about a range of users, suitable for pagination.
-	User[] get(int first_user, int max_count);
+	User[] getRange(int first_user, int max_count);
 
 	/// Deletes a user account.
 	void remove(User.ID id);
@@ -103,10 +103,16 @@ interface UserManUserAPI {
 
 	/// Sets a custom user account property.
 	void setProperty(User.ID id, string name, string value);
+
+	/// Removes a user account property.
+	void removeProperty(User.ID id, string name);
 }
 
 /// Interface suitable for manipulating group information
 interface UserManGroupAPI {
+	/// The total number of groups.
+	@property long count();
+
 	/// Creates a new group.
 	void create(string name, string description);
 
@@ -115,6 +121,15 @@ interface UserManGroupAPI {
 
 	/// Gets information about a group using its name as the identifier.
 	Group get(string id);
+
+	/// Gets a range of groups, suitable for pagination.
+	Group[] getRange(long first_group, long max_count);
+
+	/// Gets the number of members of a certain group.
+	long getMemberCount(string id);
+
+	/// Gets a list of group members, suitable for pagination.
+	User.ID[] getMemberRange(string id, long first_member, long max_count);
 
 	/// Adds a user to a group.
 	void addMember(string id, User.ID user_id);
@@ -216,7 +231,7 @@ private class UserManUserAPIImpl : UserManUserAPI {
 		return m_ctrl.getUserByEmailOrName(q);
 	}
 
-	User[] get(int first_user, int max_count)
+	User[] getRange(int first_user, int max_count)
 	{
 		User[] ret;
 		m_ctrl.enumerateUsers(first_user, max_count, (ref usr) { ret ~= usr; });
@@ -249,6 +264,11 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	{
 		m_ctrl.setProperty(id, name, value);
 	}
+
+	void removeProperty(User.ID id, string name)
+	{
+		m_ctrl.removeProperty(id, name);
+	}
 }
 
 private class UserManGroupAPIImpl : UserManGroupAPI {
@@ -259,6 +279,11 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 	this(UserManController ctrl)
 	{
 		m_ctrl = ctrl;
+	}
+
+	@property long count()
+	{
+		return m_ctrl.getGroupCount();
 	}
 
 	void create(string name, string description)
@@ -276,6 +301,13 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 		return m_ctrl.getGroup(id);
 	}
 
+	Group[] getRange(long first_group, long max_count)
+	{
+		Group[] ret;
+		m_ctrl.enumerateGroups(first_group, max_count, (ref grp) { ret ~= grp; });
+		return ret;
+	}
+
 	void addMember(string id, User.ID user_id)
 	{
 		m_ctrl.addGroupMember(id, user_id);
@@ -285,7 +317,20 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 	{
 		m_ctrl.removeGroupMember(id, user_id);
 	}
+
+	long getMemberCount(string id)
+	{
+		return m_ctrl.getGroupMemberCount(id);
+	}
+
+	User.ID[] getMemberRange(string id, long first_member, long max_count)
+	{
+		User.ID[] ret;
+		m_ctrl.enumerateGroupMembers(id, first_member, max_count, (id) { ret ~= id; });
+		return ret;
+	}
 }
+
 
 private {
 	UserManAPI m_api;

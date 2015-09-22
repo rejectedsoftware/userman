@@ -216,7 +216,7 @@ class UserManController {
 
 	abstract User getUserByEmailOrName(string email_or_name);
 
-	abstract void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del);
+	abstract void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del);
 
 	abstract long getUserCount();
 
@@ -227,11 +227,16 @@ class UserManController {
 	abstract void setFullName(User.ID user, string full_name);
 	abstract void setPassword(User.ID user, string password);
 	abstract void setProperty(User.ID user, string name, string value);
+	abstract void removeProperty(User.ID user, string name);
 
 	abstract void addGroup(string id, string description);
+	abstract long getGroupCount();
 	abstract Group getGroup(string id);
+	abstract void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del);
 	abstract void addGroupMember(string group, User.ID user);
 	abstract void removeGroupMember(string group, User.ID user);
+	abstract long getGroupMemberCount(string group);
+	abstract void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del);
 	deprecated Group getGroupByName(string id) { return getGroup(id); }
 
 	/** Test a group ID for validity.
@@ -270,7 +275,7 @@ struct User {
 	string resetCode;
 	SysTime resetCodeExpireTime;
 	AuthInfo auth;
-	Json[string] properties;
+	string[string] properties;
 
 	bool isInGroup(string group) const { return groups.countUntil(group) >= 0; }
 }

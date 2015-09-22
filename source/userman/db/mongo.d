@@ -85,9 +85,9 @@ class MongoUserManController : UserManController {
 		return usr;
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
 	{
-		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count)) {
+		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user.to!int, max_count.to!int)) {
 			if (max_count-- <= 0) break;
 			del(usr);
 		}
@@ -134,6 +134,11 @@ class MongoUserManController : UserManController {
 		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}
 	
+	override void removeProperty(User.ID user, string name)
+	{
+		m_users.update(["_id": user.bsonObjectIDValue], ["$unset": ["properties."~name: ""]]);
+	}
+
 	override void addGroup(string id, string description)
 	{
 		enforce(isValidGroupID(id), "Invalid group ID.");
@@ -144,11 +149,24 @@ class MongoUserManController : UserManController {
 		m_groups.insert(grp);
 	}
 
+	override long getGroupCount()
+	{
+		return m_groups.count(vibe.data.bson.Bson.emptyObject);
+	}
+
 	override Group getGroup(string name)
 	{
 		auto grp = m_groups.findOne!Group(["name": name]);
 		enforce(!grp.isNull(), "The specified group name is unknown.");
 		return grp;
+	}
+
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	{
+		foreach (grp; m_groups.find!Group(["query": null, "orderby": ["id": 1]], null, QueryFlags.None, first_group.to!int, max_count.to!int)) {
+			if (max_count-- <= 0) break;
+			del(grp);
+		}
 	}
 
 	override void addGroupMember(string group, User.ID user)
@@ -157,6 +175,16 @@ class MongoUserManController : UserManController {
 	}
 
 	override void removeGroupMember(string group, User.ID user)
+	{
+		assert(false);
+	}
+
+	override long getGroupMemberCount(string group)
+	{
+		assert(false);
+	}
+
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
 	{
 		assert(false);
 	}

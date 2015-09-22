@@ -117,7 +117,7 @@ class RedisUserManController : UserManController {
 		// Properties
 		auto props = m_userProperties[uid];
 		foreach (string name, value; usr.properties)
-			props[name] = value.toString();
+			props[name] = value;
 
 		// Group membership
 		foreach(string gid; usr.groups)
@@ -142,9 +142,9 @@ class RedisUserManController : UserManController {
 		auto auth = m_userAuthInfo[id.longValue];
 
 		// Properties
-		Json[string] properties;
+		string[string] properties;
 		foreach(string name, string value; m_userProperties[id.longValue])
-			properties[name] = parseJsonString(value);
+			properties[name] = value;
 
 		return susr.unstrip(id, groups, auth, properties);
 	}
@@ -182,7 +182,7 @@ class RedisUserManController : UserManController {
 		}
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
 	{
 		foreach (userId; m_redisDB.zrange!string("userman:user:all", first_user, first_user + max_count)) {
 			auto usr = getUser(User.ID(userId.to!long));
@@ -246,7 +246,7 @@ class RedisUserManController : UserManController {
 		auto props = m_userProperties[user.id.longValue];
 		props.value.remove();
 		foreach (string name, value; user.properties)
-			props[name] = value.toString();
+			props[name] = value;
 
 		// Group membership
 		foreach (gid, grp; m_groups) {
@@ -296,6 +296,13 @@ class RedisUserManController : UserManController {
 		m_userProperties[user.longValue][name] = Bson(value).toString();
 	}
 	
+	override void removeProperty(User.ID user, string name)
+	{
+		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
+
+		m_userProperties[user.longValue].remove(name);
+	}
+
 	override void addGroup(string id, string description)
 	{
 		enforce(isValidGroupID(id), "Invalid group ID.");
@@ -319,6 +326,11 @@ class RedisUserManController : UserManController {
 		m_groupsByName[id] = groupId;
 	}
 
+	override long getGroupCount()
+	{
+		return m_redisDB.zcard("userman:group:all");
+	}
+
 	override Group getGroup(string name)
 	{
 		auto grpid = m_groupsByName.get(name, -1);
@@ -335,6 +347,14 @@ class RedisUserManController : UserManController {
 		return sgrp.unstrip(properties);
 	}
 
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	{
+		foreach (id; m_redisDB.zrange!string("userman:group:all", first_group, first_group + max_count)) {
+			auto grp = getGroup(id);
+			del(grp);
+		}
+	}
+
 	override void addGroupMember(string group, User.ID user)
 	{
 		auto grpid = m_groupsByName.get(group, -1);
@@ -347,5 +367,15 @@ class RedisUserManController : UserManController {
 		auto grpid = m_groupsByName.get(group, -1);
 		enforce(grpid != -1, "The specified group name is unknown.");
 		m_redisDB.srem("userman:group:" ~ grpid.to!string ~ ":members", user);
+	}
+
+	override long getGroupMemberCount(string group)
+	{
+		assert(false);
+	}
+
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
+	{
+		assert(false);
 	}
 }

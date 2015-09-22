@@ -96,7 +96,7 @@ class FileUserManController : UserManController {
 		else return getUserByName(email_or_name);
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
 	{
 		listDirectory(m_basePath ~ "user/", (de) {
 			if (!de.name.endsWith(".json") || de.isDirectory) return true;
@@ -192,6 +192,13 @@ class FileUserManController : UserManController {
 		usr.properties[name] = value;
 		updateUser(usr);
 	}
+
+	override void removeProperty(User.ID user, string name)
+	{
+		auto usr = getUser(user);
+		usr.properties.remove(name);
+		updateUser(usr);
+	}
 	
 	override void addGroup(string id, string description)
 	{
@@ -204,9 +211,35 @@ class FileUserManController : UserManController {
 		writeFileUTF8(groupFile(grp.id), serializeToJsonString(grp));
 	}
 
+	override long getGroupCount()
+	{
+		long ret = 0;
+		listDirectory(m_basePath ~ "group/", (de) {
+			if (!de.name.endsWith(".json") || de.isDirectory) return true;
+			ret++;
+			return true;
+		});
+		return ret;
+	}
+
 	override Group getGroup(string id)
 	{
 		return readFileUTF8(groupFile(id)).deserializeJson!Group;
+	}
+
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	{
+		listDirectory(m_basePath ~ "group/", (de) {
+			if (!de.name.endsWith(".json") || de.isDirectory) return true;
+			if (first_group > 0) {
+				first_group--;
+				return true;
+			}
+			if (max_count-- <= 0) return false;
+			auto usr = getGroup(de.name[0 .. $-5]);
+			del(usr);
+			return true;
+		});
 	}
 
 	override void addGroupMember(string group, User.ID user)
@@ -226,5 +259,25 @@ class FileUserManController : UserManController {
 		if (idx >= 0) usr.groups = usr.groups[0 .. idx] ~ usr.groups[idx+1 .. $];
 		updateUser(usr);
 	}
-}
 
+	override long getGroupMemberCount(string group)
+	{
+		long ret = 0;
+		enumerateUsers(0, long.max, (ref u) {
+			if (u.groups.canFind(group))
+				ret++;
+		});
+		return ret;
+	}
+
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
+	{
+		long cnt = 0;
+		enumerateUsers(0, long.max, (ref u) {
+			if (!u.groups.canFind(group)) return;
+			if (cnt++ < first_member) return;
+			if (max_count-- <= 0) return;
+			del(u.id);
+		});
+	}
+}
