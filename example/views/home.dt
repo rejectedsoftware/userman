@@ -4,6 +4,9 @@ block title
 	- string title = "UserMan Demo";
 	
 block userman.content
-	p Hello and Welcome!
-	p
-		a(href="profile") Edit profile
+	- if (!req.session || !req.session.isKeySet("userFullName"))
+		p Please <a href="login">log in</a>.
+	- else
+		p Hello and Welcome, #{req.session.get!string("userFullName")}!
+		p
+			a(href="profile") Edit profile
