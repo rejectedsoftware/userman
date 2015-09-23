@@ -92,6 +92,7 @@ nav ul {
 	padding: 5pt 10pt;
 	margin-bottom: 30pt;
 	background-color: #ddd;
+	background: linear-gradient(#e8e8e8, #ddd);
 	border-bottom: 1px solid #bbb;
 }
 
