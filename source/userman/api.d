@@ -45,8 +45,17 @@ interface UserManAPI {
 
 	/// Interface suitable for manipulating group information
 	@property UserManGroupAPI groups();
+
+	@property APISettings settings();
 }
 
+struct APISettings {
+	bool useUserNames;
+	bool requireActivation;
+	string serviceName;
+	URL serviceURL;
+	string serviceEmail;
+}
 
 /// Interface suitable for manipulating user information
 interface UserManUserAPI {
@@ -153,6 +162,7 @@ private class UserManAPIImpl : UserManAPI {
 		UserManController m_ctrl;
 		UserManUserAPIImpl m_users;
 		UserManGroupAPIImpl m_groups;
+		APISettings m_settings;
 	}
 
 	this(UserManController ctrl)
@@ -160,10 +170,16 @@ private class UserManAPIImpl : UserManAPI {
 		m_ctrl = ctrl;
 		m_users = new UserManUserAPIImpl(ctrl);
 		m_groups = new UserManGroupAPIImpl(ctrl);
+		m_settings.useUserNames = ctrl.settings.useUserNames;
+		m_settings.requireActivation = ctrl.settings.requireAccountValidation;
+		m_settings.serviceName = ctrl.settings.serviceName;
+		m_settings.serviceURL = ctrl.settings.serviceUrl;
+		m_settings.serviceEmail = ctrl.settings.serviceEmail;
 	}
 
 	@property UserManUserAPIImpl users() { return m_users; }
 	@property UserManGroupAPIImpl groups() { return m_groups; }
+	@property APISettings settings() { return m_settings; }
 }
 
 private class UserManUserAPIImpl : UserManUserAPI {
