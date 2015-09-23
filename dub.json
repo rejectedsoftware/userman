@@ -18,5 +18,8 @@
 			"targetType": "library",
 			"excludedSourceFiles": ["source/app.d"]
 		}
+	],
+	"subPackages": [
+		"example"
 	]
 }

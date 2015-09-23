@@ -1,0 +1,9 @@
+{
+	"name": "example",
+	"targetName": "userman_example",
+	"workingDirectory": "..",
+	"dependencies": {
+		"userman": {"path": ".."}
+	},
+	"versions": ["VibeDefaultMain"]
+}
