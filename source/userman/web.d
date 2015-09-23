@@ -1,13 +1,14 @@
 /**
 	Web interface implementation
 
-	Copyright: © 2012-2014 RejectedSoftware e.K.
+	Copyright: © 2012-2015 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
 module userman.web;
 
-public import userman.db.controller;
+public import userman.api;
+import userman.db.controller;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
@@ -26,9 +27,14 @@ import std.exception;
 	$(D UserManWebAuthenticator) for some complete examples of a simple
 	web service with UserMan integration.
 */
+void registerUserManWebInterface(URLRouter router, UserManAPI api)
+{
+	router.registerWebInterface(new UserManWebInterface(api));
+}
+/// deprecated
 void registerUserManWebInterface(URLRouter router, UserManController controller)
 {
-	router.registerWebInterface(new UserManWebInterface(controller));
+	router.registerUserManWebInterface(createLocalUserManAPI(controller));
 }
 
 
@@ -38,29 +44,33 @@ void registerUserManWebInterface(URLRouter router, UserManController controller)
 	This assumes that the fields are named like they are in userman.profile.dt.
 	Session variables will be updated automatically.
 */
-void updateProfile(UserManController controller, User user, HTTPServerRequest req)
+void updateProfile(UserManAPI api, User.ID user, HTTPServerRequest req)
 {
-	if (controller.settings.useUserNames) {
-		if (auto pv = "name" in req.form) user.fullName = *pv;
-		if (auto pv = "email" in req.form) user.email = *pv;
-	} else {
-		if (auto pv = "email" in req.form) user.email = user.name = *pv;
+	/*if (api.settings.useUserNames) {
+		if (auto pv = "name" in req.form) {
+			api.users.setName(user, *pv);
+			req.session.set("userName", *pv);
+		}
+	}*/ // TODO!
+	if (auto pv = "email" in req.form) {
+		api.users.setEmail(user, *pv);
+		req.session.set("userEmail", *pv);
 	}
-	if (auto pv = "full_name" in req.form) user.fullName = *pv;
-
+	if (auto pv = "full_name" in req.form) {
+		api.users.setFullName(user, *pv);
+		req.session.set("userFullName", *pv);
+	}
 	if (auto pv = "password" in req.form) {
-		enforce(user.auth.method == "password", "User account has no password authentication.");
 		auto pconf = "password_confirmation" in req.form;
 		enforce(pconf !is null, "Missing password confirmation.");
 		validatePassword(*pv, *pconf);
-		user.auth.passwordHash = generateSimplePasswordHash(*pv);
+		api.users.setPassword(user, *pv);
 	}
-
-	controller.updateUser(user);
-
-	req.session.set("userName", user.name);
-	req.session.set("userFullName", user.fullName);
-	req.session.set("userEmail", user.email);
+}
+/// ditto
+deprecated void updateProfile(UserManController controller, User user, HTTPServerRequest req)
+{
+	updateProfile(createLocalUserManAPI(controller), user.id, req);
 }
 
 
@@ -69,14 +79,19 @@ void updateProfile(UserManController controller, User user, HTTPServerRequest re
 */
 class UserManWebAuthenticator {
 	private {
-		UserManController m_controller;
+		UserManAPI m_api;
 		string m_prefix;
 	}
 
-	this(UserManController controller, string prefix = "/")
+	this(UserManAPI api, string prefix = "/")
 	{
-		m_controller = controller;
+		m_api = api;
 		m_prefix = prefix;
+	}
+
+	deprecated this(UserManController controller, string prefix = "/")
+	{
+		this(createLocalUserManAPI(controller), prefix);
 	}
 
 	HTTPServerRequestDelegate auth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
@@ -103,7 +118,7 @@ class UserManWebAuthenticator {
 			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
 			return User.init;
 		} else {
-			return m_controller.getUserByName(req.session.get!string("userName"));
+			return m_api.users.getByName(req.session.get!string("userName"));
 		}
 	}
 	
@@ -112,7 +127,7 @@ class UserManWebAuthenticator {
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
 		{
 			if( !req.session ) return;
-			auto usr = m_controller.getUserByName(req.session.get!string("userName"));
+			auto usr = m_api.users.getByName(req.session.get!string("userName"));
 			callback(req, res, usr);
 		}
 		
@@ -134,7 +149,7 @@ unittest {
 			UserManWebAuthenticator m_auth;
 		}
 
-		this(UserManController userman)
+		this(UserManAPI userman)
 		{
 			m_auth = new UserManWebAuthenticator(userman);
 		}
@@ -164,7 +179,7 @@ unittest {
 		}
 	}
 
-	void registerMyService(URLRouter router, UserManController userman)
+	void registerMyService(URLRouter router, UserManAPI userman)
 	{
 		router.registerUserManWebInterface(userman);
 		router.registerWebInterface(new MyWebService(userman));
@@ -190,7 +205,7 @@ unittest {
 		//render!("private_page.dt", _user);
 	}
 
-	void registerMyService(URLRouter router, UserManController userman)
+	void registerMyService(URLRouter router, UserManAPI userman)
 	{
 		auto authenticator = new UserManWebAuthenticator(userman);
 		router.registerUserManWebInterface(userman);
@@ -207,26 +222,33 @@ unittest {
 */
 class UserManWebInterface {
 	private {
-		UserManController m_controller;
+		UserManAPI m_api;
 		UserManWebAuthenticator m_auth;
 		string m_prefix;
 		SessionVar!(string, "userEmail") m_sessUserEmail;
 		SessionVar!(string, "userName") m_sessUserName;
 		SessionVar!(string, "userFullName") m_sessUserFullName;
 		SessionVar!(string, "userID") m_sessUserID;
+		APISettings m_settings;
 	}
 	
-	this(UserManController controller, string prefix = "/")
+	this(UserManAPI api, string prefix = "/")
 	{
-		m_controller = controller;
-		m_auth = new UserManWebAuthenticator(controller);
+		m_api = api;
+		m_settings = api.settings;
+		m_auth = new UserManWebAuthenticator(api);
 		m_prefix = prefix;
+	}
+
+	deprecated this(UserManController controller, string prefix = "/")
+	{
+		this(createLocalUserManAPI(controller), prefix);
 	}
 	
 	void getLogin(string redirect = "", string _error = "")
 	{
 		string error = _error;
-		auto settings = m_controller.settings;
+		auto settings = m_settings;
 		render!("userman.login.dt", error, redirect, settings);
 	}
 
@@ -235,7 +257,7 @@ class UserManWebInterface {
 	{
 		User user;
 		try {
-			user = m_controller.getUserByEmailOrName(name);
+			user = m_api.users.getByEmailOrName(name);
 			enforce(testSimplePasswordHash(user.auth.passwordHash, password), "Wrong password.");
 		} catch (Exception e) {
 			logDebug("Error logging in: %s", e.toString().sanitize);
@@ -254,14 +276,14 @@ class UserManWebInterface {
 	void getLogout(HTTPServerResponse res)
 	{
 		terminateSession();
-		res.headers["Refresh"] = "3; url="~m_controller.settings.serviceUrl.toString();
+		res.headers["Refresh"] = "3; url="~m_settings.serviceURL.toString();
 		render!("userman.logout.dt");
 	}
 
 	void getRegister(string _error = "")
 	{
 		string error = _error;
-		auto settings = m_controller.settings;
+		auto settings = m_settings;
 		render!("userman.register.dt", error, settings);
 	}
 	
@@ -269,14 +291,14 @@ class UserManWebInterface {
 	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
-		if (m_controller.settings.useUserNames) {
+		if (m_settings.useUserNames) {
 			enforce(!name.isNull(), "Missing user name field.");
 			username = name;
 		} else username = email;
 
-		m_controller.registerUser(email, username, fullName, password);
+		m_api.users.register(email, username, fullName, password);
 
-		if (m_controller.settings.requireAccountValidation) {
+		if (m_settings.requireActivation) {
 			string error;
 			render!("userman.register_activate.dt", error);
 		} else {
@@ -294,7 +316,7 @@ class UserManWebInterface {
 	void postResendActivation(ValidEmail email)
 	{
 		try {
-			m_controller.resendActivation(email);
+			m_api.users.resendActivation(email);
 			render!("userman.resend_activation_done.dt");
 		} catch (Exception e) {
 			logDebug("Error sending activation mail: %s", e.toString().sanitize);
@@ -304,8 +326,8 @@ class UserManWebInterface {
 
 	void getActivate(ValidEmail email, string code)
 	{
-		m_controller.activateUser(email, code);
-		auto user = m_controller.getUserByEmail(email);
+		m_api.users.activate(email, code);
+		auto user = m_api.users.getByEmail(email);
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
@@ -323,7 +345,7 @@ class UserManWebInterface {
 	void postForgotLogin(ValidEmail email)
 	{
 		try {
-			m_controller.requestPasswordReset(email);
+			m_api.users.requestPasswordReset(email);
 		} catch(Exception e) {
 			// ignore errors, so that registered e-mails cannot be determined
 			logDiagnostic("Failed to send password reset mail to %s: %s", email, e.msg);
@@ -341,8 +363,8 @@ class UserManWebInterface {
 	@errorDisplay!getResetPassword
 	void postResetPassword(ValidEmail email, string code, ValidPassword password, Confirm!"password" password_confirmation, HTTPServerResponse res)
 	{
-		m_controller.resetPassword(email, code, password);
-		res.headers["Refresh"] = "3; url=" ~ m_controller.settings.serviceUrl.toString();
+		m_api.users.resetPassword(email, code, password);
+		res.headers["Refresh"] = "3; url=" ~ m_settings.serviceURL.toString();
 		render!("userman.reset_password_done.dt");
 	}
 
@@ -351,7 +373,7 @@ class UserManWebInterface {
 	{
 		req.form["full_name"] = _user.fullName;
 		req.form["email"] = _user.email;
-		bool useUserNames = m_controller.settings.useUserNames;
+		bool useUserNames = m_settings.useUserNames;
 		auto user = _user;
 		string error = _error;
 		render!("userman.profile.dt", user, useUserNames, error);
@@ -360,7 +382,7 @@ class UserManWebInterface {
 	@auth @errorDisplay!getProfile
 	void postProfile(HTTPServerRequest req, User _user)
 	{
-		updateProfile(m_controller, _user, req);
+		updateProfile(m_api, _user.id, req);
 		redirect(m_prefix);
 	}
 
