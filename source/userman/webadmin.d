@@ -143,9 +143,21 @@ private class UserManWebAdminInterface {
 	}
 
 	@auth @path("/users/:user/") @errorDisplay!getUser
-	void postUser(AuthInfo auth)
+	void postUser(AuthInfo auth, User.ID _user, ValidUsername username, ValidEmail email, string full_name, bool active, bool banned)
 	{
-		// TODO!
+		//m_api.users.setName(_user, username); // TODO!
+		m_api.users.setEmail(_user, email);
+		m_api.users.setFullName(_user, full_name);
+		m_api.users.setActive(_user, active);
+		m_api.users.setBanned(_user, banned);
+		redirect("/users/"~_user.toString~"/");
+	}
+
+	@auth @path("/users/:user/password") @errorDisplay!getUser
+	void postUserPassword(AuthInfo auth, User.ID _user, ValidPassword password, Confirm!"password" password_confirmation)
+	{
+		m_api.users.setPassword(_user, password);
+		redirect("/users/"~_user.toString~"/");
 	}
 
 	@auth @path("/users/:user/set_property") @errorDisplay!getUser

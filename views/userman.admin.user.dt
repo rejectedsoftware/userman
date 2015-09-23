@@ -37,8 +37,39 @@ block userman.content
 					label(for="email")& E-mail
 				td
 					input#email(type="text", name="email", value=info.user.email)
+			tr
+				th
+					input#active(type="checkbox", name="active", checked=info.user.active)
+					label(for="active")& Active
+				td
+					
+			tr
+				th
+					input#banned(type="checkbox", name="banned", checked=info.user.banned)
+					label(for="banned")& Banned
+				td
+					
 		button(type="submit")& Apply
 
+
+	h2& Change password
+
+	form(method="POST", action="./password")
+		table
+			colgroup
+				col.propname
+			tr
+				th
+					label(for="password")& Password
+				td
+					input#password(type="password", name="password")
+			tr
+				th
+					label(for="password_confirmation")& Confirm password
+				td
+					input#password_confirmation(type="password", name="password_confirmation")
+					
+		button(type="submit")& Change password
 
 	h2& Properties
 	.table
