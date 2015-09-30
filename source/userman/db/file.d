@@ -211,6 +211,18 @@ class FileUserManController : UserManController {
 		writeFileUTF8(groupFile(grp.id), serializeToJsonString(grp));
 	}
 
+	override void removeGroup(string id)
+	{
+		removeFile(groupFile(id));
+	}
+
+	override void setGroupDescription(string name, string description)
+	{
+		auto grp = getGroup(name);
+		grp.description = description;
+		writeFileUTF8(groupFile(name), serializeToJsonString(grp));
+	}
+
 	override long getGroupCount()
 	{
 		long ret = 0;

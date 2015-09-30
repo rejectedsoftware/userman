@@ -326,6 +326,19 @@ class RedisUserManController : UserManController {
 		m_groupsByName[id] = groupId;
 	}
 
+	override void removeGroup(string id)
+	{
+		auto gid = m_groupsByName[id];
+		m_groups.remove(gid);
+		m_groupsByName.remove(id);
+	}
+
+	override void setGroupDescription(string name, string description)
+	{
+		auto gid = m_groupsByName[name];
+		m_groups[gid].description = description;
+	}
+
 	override long getGroupCount()
 	{
 		return m_redisDB.zcard("userman:group:all");

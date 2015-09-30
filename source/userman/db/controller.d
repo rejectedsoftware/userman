@@ -230,6 +230,8 @@ class UserManController {
 	abstract void removeProperty(User.ID user, string name);
 
 	abstract void addGroup(string id, string description);
+	abstract void removeGroup(string name);
+	abstract void setGroupDescription(string name, string description);
 	abstract long getGroupCount();
 	abstract Group getGroup(string id);
 	abstract void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del);

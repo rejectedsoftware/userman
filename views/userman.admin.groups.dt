@@ -10,15 +10,29 @@ block userman.navigation
 
 block userman.content
 	- import std.algorithm : min, max;
-	table
-		tr
-			th& Name
-			th& Description
-		- foreach (g; info.groups)
+
+	- if (info.error.length)
+		p.error= info.error
+
+	h2& Group list
+
+	form(method="POST", action="groups/multi")
+		table
 			tr
-				td
-					a(href="#{req.rootDir}groups/#{g.id}/")= g.id
-				td= g.description
+				th &nbsp;
+				th& Name
+				th& Description
+			- foreach (g; info.groups)
+				tr
+					td
+						input(type="checkbox", name="selection", value=g.id)
+					td
+						a(href="#{req.rootDir}groups/#{g.id}/")= g.id
+					td= g.description
+			tr
+				td.selindicator
+				td(colspan=3)
+					button(name="action", value="delete")& Delete
 
 	- if (info.pageCount > 1)
 		a(href="?page=1")& First&nbsp;
@@ -26,3 +40,21 @@ block userman.content
 			a(href="?page=#{i}")= i
 			| &nbsp;
 		a(href="?page=info.pageCount")& Last
+
+	- if (info.page == 1)
+		h2& Create group
+
+		form(action="/groups/", method="POST")
+			table
+				tr
+					th& Name*
+					td
+						input(type="text", name="name")
+				tr
+					th& Description
+					td
+						input(type="text", name="description")
+				tr
+					th &nbsp;
+					td
+						button(type="submit")& Create group

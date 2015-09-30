@@ -125,7 +125,7 @@ private class UserManWebAdminInterface {
 	{
 		import std.algorithm : map;
 		foreach (u; /*selection*/req.form.getAll("selection").map!(id => User.ID.fromString(id)))
-			performAction(u, action);
+			performUserAction(u, action);
 		redirect(page > 1 ? "/users?page="~page.to!string : "/users");
 	}
 
@@ -172,33 +172,71 @@ private class UserManWebAdminInterface {
 	}
 
 	@auth
-	void getGroups(AuthInfo auth, long page = 1)
+	void getGroups(AuthInfo auth, long page = 1, string _error = null)
 	{
 		static struct Info {
 			Group[] groups;
 			long pageCount;
 			long page;
+			string error;
 		}
 
 		Info info;
 		info.page = page;
 		info.pageCount = (m_api.groups.count + m_entriesPerPage - 1) / m_entriesPerPage;
 		info.groups = m_api.groups.getRange((page-1) * m_entriesPerPage, m_entriesPerPage);
+		info.error = _error;
 		render!("userman.admin.groups.dt", info);
 	}
 
+	@auth @errorDisplay!getGroups
+	void postGroups(AuthInfo auth, ValidGroupName name, string description)
+	{
+		m_api.groups.create(name, description);
+		redirect("/groups/"~name~"/");
+	}
+
+	@auth @path("/groups/multi") @errorDisplay!getGroups
+	void postMultiGroupUpdate(AuthInfo auth, string action, HTTPServerRequest req, /*User.ID[] selection,*/ int page = 1)
+	{
+		import std.algorithm : map;
+		foreach (g; /*selection*/req.form.getAll("selection"))
+			performGroupAction(g, action);
+		redirect(page > 1 ? "/groups?page="~page.to!string : "/groups");
+	}
+
 	@auth @path("/groups/:group/")
-	void getGroup(AuthInfo auth, string _group)
+	void getGroup(AuthInfo auth, string _group, string _error = null)
 	{
 		static struct Info {
 			Group group;
 			long memberCount;
+			string error;
 		}
 		Info info;
 		info.group = m_api.groups.get(_group);
 		info.memberCount = m_api.groups.getMemberCount(_group);
+		info.error = _error;
 		render!("userman.admin.group.dt", info);
 	}
+
+	@auth @path("/groups/:group/") @errorDisplay!getGroup
+	void postGroup(AuthInfo auth, string _group, string description)
+	{
+		m_api.groups.setDescription(_group, description);
+		redirect("/groups/"~_group~"/");
+	}
+
+	/*@auth @path("/group/:group/set_property") @errorDisplay!getGroup
+	void postSetGroupProperty(AuthInfo auth, string _group, Nullable!string old_name, string name, string value)
+	{
+		import vibe.data.json : parseJson;
+
+		if (!old_name.isNull() && old_name != name)
+			m_api.groups.removeProperty(_group, old_name);
+		if (name.length) m_api.groups.setProperty(_group, name, parseJson(value));
+		redirect("./");
+	}*/
 
 	@auth @path("/groups/:group/members/")
 	void getGroupMembers(AuthInfo auth, string _group, long page = 1, string _error = null)
@@ -241,7 +279,7 @@ private class UserManWebAdminInterface {
 		redirect("/groups/"~_group~"/members/");
 	}
 
-	private void performAction(User.ID user, string action)
+	private void performUserAction(User.ID user, string action)
 	{
 		switch (action) {
 			default: throw new Exception("Unknown action: "~action);
@@ -249,8 +287,19 @@ private class UserManWebAdminInterface {
 			case "deactivate": m_api.users.setActive(user, false); break;
 			case "ban": m_api.users.setBanned(user, true); break;
 			case "unban": m_api.users.setBanned(user, false); break;
-			case "remove": m_api.users.remove(user); break;
+			case "delete": m_api.users.remove(user); break;
 			case "sendActivation": m_api.users.resendActivation(user); break;
+		}
+	}
+
+	private void performGroupAction(string group, string action)
+	{
+		switch (action) {
+			default: throw new Exception("Unknown action: "~action);
+			case "delete":
+				enforce(group != adminGroupName, "Cannot remove admin group.");
+				m_api.groups.remove(group);
+				break;
 		}
 	}
 
@@ -269,4 +318,41 @@ private class UserManWebAdminInterface {
 
 private struct AuthInfo {
 	User user;
+}
+
+struct ValidGroupName {
+	string m_value;
+
+	@disable this();
+
+	private this(string value) { m_value = value; }
+
+	static Nullable!ValidGroupName fromStringValidate(string str, string* err)
+	{
+		import vibe.utils.validation : validateIdent;
+		import std.algorithm : splitter;
+
+		// work around disabled default construction
+		auto ret = Nullable!ValidGroupName(ValidGroupName(null));
+		ret.nullify();
+
+		if (str.length < 1) {
+			*err = "Group names must not be empty.";
+			return ret;
+		}
+		auto errapp = appender!string;
+		foreach (p; str.splitter(".")) {
+			if (!validateIdent(errapp, p)) {
+				*err = errapp.data;
+				return ret;
+			}
+		}
+
+		ret = ValidGroupName(str);
+		return ret;
+	}
+
+	string toString() const { return m_value; }
+
+	alias toString this;
 }

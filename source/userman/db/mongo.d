@@ -149,6 +149,16 @@ class MongoUserManController : UserManController {
 		m_groups.insert(grp);
 	}
 
+	override void removeGroup(string id)
+	{
+		m_groups.remove(["id": id]);
+	}
+
+	override void setGroupDescription(string name, string description)
+	{
+		m_groups.update(["id": name], ["$set": ["description": description]]);
+	}
+
 	override long getGroupCount()
 	{
 		return m_groups.count(vibe.data.bson.Bson.emptyObject);

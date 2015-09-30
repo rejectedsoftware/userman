@@ -13,35 +13,43 @@ block userman.navigation
 block userman.content
 	- import std.algorithm : sort;
 
+	- if (info.error.length)
+		p.error= info.error
+
 	h2& General
 
 	p& Name of this group: #{info.group.id}
 	p& The group has #{info.memberCount} members.
 		a(href="members/")& View members.
 
-	form(method="", action="")
+	form(method="POST", action="./")
 		label(for="description")& Group description:
 		input#description(type="text", name="description", value=info.group.description)
-		button(type="submit") Apply;
+		button(type="submit") Apply
 
-	h2& Properties
-	table
-		tr
-			th& Name
-			th& Value (JSON)
-			th& Action
-		- foreach (n; info.group.properties.byKey.array.sort())
-			tr
-				td= n
-				td
-					input(type="text", name="properties[#{n}]", value=info.group.properties[n]);
-				td
-					button(type="sumbit") Set
-		tr
-			td
-				input(type="text")
-			td
-				input(type="text")
-			td
-				button(type="submit") Add
+	//-
+		h2& Properties
+		.table
+			.colgroup
+				.col.propname
+			.tr
+				.th& Name
+				.th& Value (JSON)
+				.th& Action
+			- foreach (n; info.group.properties.byKey.array.sort())
+				form.tr(method="POST", action="set_property")
+					input(type="hidden", name="old_name", value=n)
+					.td
+						input(type="text", name="name", value=n)
+					.td
+						input(type="text", name="value", value=info.group.properties[n])
+					.td
+						button(type="sumbit") Set
+			form.tr(method="POST", action="set_property")
+				.td
+					input(type="text", name="name")
+				.td
+					input(type="text", name="value")
+				.td
+					button(type="submit") Add
 

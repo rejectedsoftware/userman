@@ -132,8 +132,14 @@ interface UserManGroupAPI {
 	/// Creates a new group.
 	void create(string name, string description);
 
+	/// Removes a group.
+	void remove(string name);
+
 	/// Gets information about an existing group.
 	//Group getByID(Group.ID id);
+
+	/// Sets the description of a group.
+	void setDescription(string name, string description);
 
 	/// Gets information about a group using its name as the identifier.
 	Group get(string id);
@@ -333,7 +339,17 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 
 	void create(string name, string description)
 	{
-		return m_ctrl.addGroup(name, description);
+		m_ctrl.addGroup(name, description);
+	}
+
+	void remove(string name)
+	{
+		m_ctrl.removeGroup(name);
+	}
+
+	void setDescription(string name, string description)
+	{
+		m_ctrl.setGroupDescription(name, description);
 	}
 
 	/*Group getByID(Group.ID id)
