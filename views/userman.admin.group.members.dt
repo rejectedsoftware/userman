@@ -13,6 +13,9 @@ block userman.navigation
 			a(href="../")= info.group.id
 
 block userman.content
+	- if (info.error.length)
+		p.error= info.error
+
 	- import std.algorithm : min, max;
 	table
 		tr
@@ -27,14 +30,8 @@ block userman.content
 				td= u.email
 				td= u.fullName
 				td
-					button(type="submit") Remove
-		tr
-			td
-				input(type="text", name="username")
-			td &nbsp;
-			td &nbsp;
-			td
-				button(type="submit") Add
+					form(action="#{req.rootDir}groups/#{info.group.id}/members/#{u.id}/remove", method="POST")
+						button(type="submit") Remove
 
 	- if (info.pageCount > 1)
 		a(href="?page=1")& First&nbsp;
@@ -42,3 +39,10 @@ block userman.content
 			a(href="?page=#{i}")= i
 			| &nbsp;
 		a(href="?page=info.pageCount")& Last
+
+	- if (info.page == 1)
+		form(action="#{req.rootDir}groups/#{info.group.id}/members/", method="POST")
+			div
+				label(for="add_username") User name
+				input#add_username(type="text", name="username")
+			button(type="submit") Add

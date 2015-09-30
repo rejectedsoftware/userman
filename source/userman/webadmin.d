@@ -201,7 +201,7 @@ private class UserManWebAdminInterface {
 	}
 
 	@auth @path("/groups/:group/members/")
-	void getGroupMembers(AuthInfo auth, string _group, long page = 1)
+	void getGroupMembers(AuthInfo auth, string _group, long page = 1, string _error = null)
 	{
 		import std.algorithm : map;
 		import std.array : array;
@@ -211,6 +211,7 @@ private class UserManWebAdminInterface {
 			User[] members;
 			long page;
 			long pageCount;
+			string error;
 		}
 		Info info;
 		info.group = m_api.groups.get(_group);
@@ -219,7 +220,25 @@ private class UserManWebAdminInterface {
 		info.members = m_api.groups.getMemberRange(_group, (page-1) * m_entriesPerPage, m_entriesPerPage)
 			.map!(id => m_api.users.get(id))
 			.array;
+		info.error = _error;
 		render!("userman.admin.group.members.dt", info);
+	}
+
+	@auth @path("/groups/:group/members/:user/remove") @errorDisplay!getGroupMembers
+	void postRemoveMember(AuthInfo auth, string _group, User.ID _user)
+	{
+		enforce(_group != adminGroupName || _user != auth.user.id,
+			"Cannot remove yourself from the admin group.");
+		m_api.groups.removeMember(_group, _user);
+		redirect("/groups/"~_group~"/members/");
+	}
+
+	@auth @path("/groups/:group/members/") @errorDisplay!getGroupMembers
+	void postAddMember(AuthInfo auth, string _group, string username)
+	{
+		auto uid = m_api.users.getByName(username).id;
+		m_api.groups.addMember(_group, uid);
+		redirect("/groups/"~_group~"/members/");
 	}
 
 	private void performAction(User.ID user, string action)
