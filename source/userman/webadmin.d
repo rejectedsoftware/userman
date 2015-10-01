@@ -95,6 +95,10 @@ private class UserManWebAdminInterface {
 		render!("userman.admin.index.dt");
 	}
 
+	/*********/
+	/* Users */
+	/**************************************************************************/
+
 	@auth
 	void getUsers(AuthInfo auth, int page = 1, string _error = null)
 	{
@@ -170,6 +174,10 @@ private class UserManWebAdminInterface {
 		if (name.length) m_api.users.setProperty(_user, name, parseJson(value));
 		redirect("./");
 	}
+
+	/**********/
+	/* Groups */
+	/**************************************************************************/
 
 	@auth
 	void getGroups(AuthInfo auth, long page = 1, string _error = null)
@@ -277,6 +285,31 @@ private class UserManWebAdminInterface {
 		auto uid = m_api.users.getByName(username).id;
 		m_api.groups.addMember(_group, uid);
 		redirect("/groups/"~_group~"/members/");
+	}
+
+	/************/
+	/* Settings */
+	/**************************************************************************/
+
+	@auth @path("/settings/")
+	void getSettings(AuthInfo auth, string _error = null)
+	{
+		struct Info {
+			string error;
+			APISettings settings;
+		}
+
+		Info info;
+		info.error = _error;
+		info.settings = m_api.settings;
+		render!("userman.admin.settings.dt", info);
+	}
+
+	@auth @path("/settings/") @errorDisplay!getSettings
+	void posttSettings(AuthInfo auth)
+	{
+		// TODO!
+		redirect("/settings/");
 	}
 
 	private void performUserAction(User.ID user, string action)

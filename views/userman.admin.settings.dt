@@ -1,0 +1,46 @@
+extends userman.admin.layout
+
+block title
+	- string title = "Settings";
+
+block userman.navigation
+	ul
+		li
+			a(href="../")& Overview
+
+block userman.content
+	- if (info.error.length)
+		p.error= info.error
+
+	h2& General
+
+	form(method="POST", action="./")
+		table
+			colgroup
+				col.propname
+			tr
+				th
+					input#useUserNames(type="checkbox", name="settings.useUserNames", checked=info.settings.useUserNames)
+					label(for="useUserNames")& Use user names
+				td &nbsp;
+			tr
+				th
+					input#requireActivation(type="checkbox", name="settings.requireActivation", checked=info.settings.requireActivation)
+					label(for="requireActivation")& Require activation
+				td &nbsp;
+			tr
+				th
+					label(for="serviceName")& Service name
+				td
+					input#serviceName(type="text", name="settings.serviceName", value=info.settings.serviceName)
+			tr
+				th
+					label(for="serviceURL")& Service URL
+				td
+					input#serviceURL(type="text", name="settnigs.serviceURL", value=info.settings.serviceURL)
+			tr
+				th
+					label(for="serviceEmail")& Service email
+				td
+					input#serviceEmail(type="text", name="settings.serviceEmail", value=info.settings.serviceEmail)
+		button(type="submit", disabled)& Apply (not implemented)
