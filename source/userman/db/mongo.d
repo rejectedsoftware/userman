@@ -59,7 +59,7 @@ class MongoUserManController : UserManController {
 	{
 		auto usr = m_users.findOne!User(["_id": id.bsonObjectIDValue	]);
 		enforce(!usr.isNull(), "The specified user id is invalid.");
-		return usr;
+		return usr.get;
 	}
 
 	override User getUserByName(string name)
@@ -75,14 +75,14 @@ class MongoUserManController : UserManController {
 		email = email.toLower();
 		auto usr = m_users.findOne!User(["email": email]);
 		enforce(!usr.isNull(), "There is no user account for the specified email address.");
-		return usr;
+		return usr.get;
 	}
 
 	override User getUserByEmailOrName(string email_or_name)
 	{
 		auto usr = m_users.findOne!User(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
 		enforce(!usr.isNull(), "The specified email address or user name is not registered.");
-		return usr;
+		return usr.get;
 	}
 
 	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
@@ -148,13 +148,13 @@ class MongoUserManController : UserManController {
 	{
 		auto grp = m_groups.findOne!Group(["_id": id.bsonObjectIDValue]);
 		enforce(!grp.isNull(), "The specified group id is invalid.");
-		return grp;
+		return grp.get;
 	}
 
 	override Group getGroupByName(string name)
 	{
 		auto grp = m_groups.findOne!Group(["name": name]);
 		enforce(!grp.isNull(), "The specified group name is unknown.");
-		return grp;
+		return grp.get;
 	}
 }
