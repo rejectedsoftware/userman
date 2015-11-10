@@ -61,7 +61,7 @@ private class UserManWebAdminInterface {
 			throw new Exception("Invalid user/email or password.");
 		}
 
-		auto user = m_api.users.get(uid);
+		auto user = m_api.users[uid].get();
 		enforce(user.active, "The account is not yet activated.");
 		enforce(user.groups.canFind(adminGroupName), "User is not an administrator.");
 
@@ -74,11 +74,11 @@ private class UserManWebAdminInterface {
 	void postInitialRegister(ValidUsername username, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation, string redirect = "/")
 	{
 		enforceHTTP(m_api.users.count == 0, HTTPStatus.forbidden, "Cannot create initial admin account when other accounts already exist.");
-		try m_api.groups.get(adminGroupName);
+		try m_api.groups[adminGroupName].get();
 		catch (Exception) m_api.groups.create(adminGroupName, "UserMan Administrators");
 
 		auto uid = m_api.users.register(email, username, full_name, password);
-		m_api.groups.addMember(adminGroupName, uid);
+		m_api.groups[adminGroupName].members.add(uid);
 		m_authUser = uid;
 		.redirect(redirect);
 	}
@@ -141,7 +141,7 @@ private class UserManWebAdminInterface {
 			string error;
 		}
 		Info info;
-		info.user = m_api.users.get(_user);
+		info.user = m_api.users[_user].get();
 		info.error = _error;
 		render!("userman.admin.user.dt", info);
 	}
@@ -149,18 +149,18 @@ private class UserManWebAdminInterface {
 	@auth @path("/users/:user/") @errorDisplay!getUser
 	void postUser(AuthInfo auth, User.ID _user, ValidUsername username, ValidEmail email, string full_name, bool active, bool banned)
 	{
-		//m_api.users.setName(_user, username); // TODO!
-		m_api.users.setEmail(_user, email);
-		m_api.users.setFullName(_user, full_name);
-		m_api.users.setActive(_user, active);
-		m_api.users.setBanned(_user, banned);
+		//m_api.users[_user].setName(username); // TODO!
+		m_api.users[_user].setEmail(email);
+		m_api.users[_user].setFullName(full_name);
+		m_api.users[_user].setActive(active);
+		m_api.users[_user].setBanned(banned);
 		redirect("/users/"~_user.toString~"/");
 	}
 
 	@auth @path("/users/:user/password") @errorDisplay!getUser
 	void postUserPassword(AuthInfo auth, User.ID _user, ValidPassword password, Confirm!"password" password_confirmation)
 	{
-		m_api.users.setPassword(_user, password);
+		m_api.users[_user].setPassword(password);
 		redirect("/users/"~_user.toString~"/");
 	}
 
@@ -170,8 +170,8 @@ private class UserManWebAdminInterface {
 		import vibe.data.json : parseJson;
 
 		if (!old_name.isNull() && old_name != name)
-			m_api.users.removeProperty(_user, old_name);
-		if (name.length) m_api.users.setProperty(_user, name, parseJson(value));
+			m_api.users[_user].removeProperty(old_name);
+		if (name.length) m_api.users[_user].setProperty(name, parseJson(value));
 		redirect("./");
 	}
 
@@ -222,8 +222,8 @@ private class UserManWebAdminInterface {
 			string error;
 		}
 		Info info;
-		info.group = m_api.groups.get(_group);
-		info.memberCount = m_api.groups.getMemberCount(_group);
+		info.group = m_api.groups[_group].get();
+		info.memberCount = m_api.groups[_group].members.count();
 		info.error = _error;
 		render!("userman.admin.group.dt", info);
 	}
@@ -231,7 +231,7 @@ private class UserManWebAdminInterface {
 	@auth @path("/groups/:group/") @errorDisplay!getGroup
 	void postGroup(AuthInfo auth, string _group, string description)
 	{
-		m_api.groups.setDescription(_group, description);
+		m_api.groups[_group].setDescription(description);
 		redirect("/groups/"~_group~"/");
 	}
 
@@ -260,11 +260,11 @@ private class UserManWebAdminInterface {
 			string error;
 		}
 		Info info;
-		info.group = m_api.groups.get(_group);
+		info.group = m_api.groups[_group].get();
 		info.page = page;
 		info.pageCount = ((m_api.groups.count + m_entriesPerPage - 1) / m_entriesPerPage).to!int;
-		info.members = m_api.groups.getMemberRange(_group, (page-1) * m_entriesPerPage, m_entriesPerPage)
-			.map!(id => m_api.users.get(id))
+		info.members = m_api.groups[_group].members.getRange((page-1) * m_entriesPerPage, m_entriesPerPage)
+			.map!(id => m_api.users[id].get())
 			.array;
 		info.error = _error;
 		render!("userman.admin.group.members.dt", info);
@@ -275,7 +275,7 @@ private class UserManWebAdminInterface {
 	{
 		enforce(_group != adminGroupName || _user != auth.user.id,
 			"Cannot remove yourself from the admin group.");
-		m_api.groups.removeMember(_group, _user);
+		m_api.groups[_group].members[_user].remove();
 		redirect("/groups/"~_group~"/members/");
 	}
 
@@ -283,7 +283,7 @@ private class UserManWebAdminInterface {
 	void postAddMember(AuthInfo auth, string _group, string username)
 	{
 		auto uid = m_api.users.getByName(username).id;
-		m_api.groups.addMember(_group, uid);
+		m_api.groups[_group].members.add(uid);
 		redirect("/groups/"~_group~"/members/");
 	}
 
@@ -316,12 +316,15 @@ private class UserManWebAdminInterface {
 	{
 		switch (action) {
 			default: throw new Exception("Unknown action: "~action);
-			case "activate": m_api.users.setActive(user, true); break;
-			case "deactivate": m_api.users.setActive(user, false); break;
-			case "ban": m_api.users.setBanned(user, true); break;
-			case "unban": m_api.users.setBanned(user, false); break;
-			case "delete": m_api.users.remove(user); break;
-			case "sendActivation": m_api.users.resendActivation(user); break;
+			case "activate": m_api.users[user].setActive(true); break;
+			case "deactivate": m_api.users[user].setActive(false); break;
+			case "ban": m_api.users[user].setBanned(true); break;
+			case "unban": m_api.users[user].setBanned(false); break;
+			case "delete": m_api.users[user].remove(); break;
+			case "sendActivation":
+				auto email = m_api.users[user].get().email;
+				m_api.users.resendActivation(email);
+				break;
 		}
 	}
 
@@ -331,7 +334,7 @@ private class UserManWebAdminInterface {
 			default: throw new Exception("Unknown action: "~action);
 			case "delete":
 				enforce(group != adminGroupName, "Cannot remove admin group.");
-				m_api.groups.remove(group);
+				m_api.groups[group].remove();
 				break;
 		}
 	}
@@ -344,7 +347,7 @@ private class UserManWebAdminInterface {
 			redirect("/login?redirect="~req.path.urlEncode);
 			return AuthInfo.init;
 		} else {
-			return AuthInfo(m_api.users.get(m_authUser));
+			return AuthInfo(m_api.users[m_authUser].get());
 		}
 	}
 }

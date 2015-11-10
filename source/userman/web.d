@@ -53,18 +53,18 @@ void updateProfile(UserManAPI api, User.ID user, HTTPServerRequest req)
 		}
 	}*/ // TODO!
 	if (auto pv = "email" in req.form) {
-		api.users.setEmail(user, *pv);
+		api.users[user].setEmail(*pv);
 		req.session.set("userEmail", *pv);
 	}
 	if (auto pv = "full_name" in req.form) {
-		api.users.setFullName(user, *pv);
+		api.users[user].setFullName(*pv);
 		req.session.set("userFullName", *pv);
 	}
 	if (auto pv = "password" in req.form) {
 		auto pconf = "password_confirmation" in req.form;
 		enforce(pconf !is null, "Missing password confirmation.");
 		validatePassword(*pv, *pconf);
-		api.users.setPassword(user, *pv);
+		api.users[user].setPassword(*pv);
 	}
 }
 /// ditto

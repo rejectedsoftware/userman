@@ -41,10 +41,10 @@ RestInterfaceClient!UserManAPI createUserManRestAPI(URL base_url)
 /// Root entry point for the UserMan API
 interface UserManAPI {
 	/// Interface suitable for manipulating user information
-	@property UserManUserAPI users();
+	@property Collection!UserManUserAPI users();
 
 	/// Interface suitable for manipulating group information
-	@property UserManGroupAPI groups();
+	@property Collection!UserManGroupAPI groups();
 
 	@property APISettings settings();
 }
@@ -59,6 +59,10 @@ struct APISettings {
 
 /// Interface suitable for manipulating user information
 interface UserManUserAPI {
+	struct CollectionIndices {
+		User.ID _id;
+	}
+
 	/// Gets the total number of registered users.
 	@property long count();
 
@@ -84,7 +88,7 @@ interface UserManUserAPI {
 	void resetPassword(string email, string reset_code, string new_password);
 
 	/// Gets information about a user.
-	User get(User.ID id);
+	User get(User.ID _id);
 
 	/// Gets information about a user using the user name as the identifier.
 	User getByName(string q);
@@ -99,33 +103,39 @@ interface UserManUserAPI {
 	User[] getRange(int first_user, int max_count);
 
 	/// Deletes a user account.
-	void remove(User.ID id);
+	void remove(User.ID _id);
 	//void update(in ref User user);
 
 	/// Updates the e-mail address of a user account.
-	void setEmail(User.ID id, string email);
+	void setEmail(User.ID _id, string email);
 
 	/// Updates the display name of a user.
-	void setFullName(User.ID id, string full_name);
+	void setFullName(User.ID _id, string full_name);
 
 	/// Sets a new password.
-	void setPassword(User.ID id, string password);
+	void setPassword(User.ID _id, string password);
 
 	/// Sets the activation state of a user.
-	void setActive(User.ID id, bool active);
+	void setActive(User.ID _id, bool active);
 
 	/// Sets the banned state of a user.
-	void setBanned(User.ID id, bool banned);
+	void setBanned(User.ID _id, bool banned);
 
 	/// Sets a custom user account property.
-	void setProperty(User.ID id, string name, Json value);
+	void setProperty(User.ID _id, string name, Json value);
 
 	/// Removes a user account property.
-	void removeProperty(User.ID id, string name);
+	void removeProperty(User.ID _id, string name);
 }
 
 /// Interface suitable for manipulating group information
 interface UserManGroupAPI {
+	struct CollectionIndices {
+		string _name;
+	}
+
+	Collection!UserManGroupMemberAPI members(string _name);
+
 	/// The total number of groups.
 	@property long count();
 
@@ -133,31 +143,38 @@ interface UserManGroupAPI {
 	void create(string name, string description);
 
 	/// Removes a group.
-	void remove(string name);
+	void remove(string _name);
 
 	/// Gets information about an existing group.
 	//Group getByID(Group.ID id);
 
 	/// Sets the description of a group.
-	void setDescription(string name, string description);
+	void setDescription(string _name, string description);
 
 	/// Gets information about a group using its name as the identifier.
-	Group get(string id);
+	Group get(string _name);
 
 	/// Gets a range of groups, suitable for pagination.
 	Group[] getRange(long first_group, long max_count);
+}
+
+interface UserManGroupMemberAPI {
+	struct CollectionIndices {
+		string _group;
+		User.ID _user;
+	}
 
 	/// Gets the number of members of a certain group.
-	long getMemberCount(string id);
+	long count(string _group);
 
 	/// Gets a list of group members, suitable for pagination.
-	User.ID[] getMemberRange(string id, long first_member, long max_count);
+	User.ID[] getRange(string _group, long first_member, long max_count);
 
 	/// Adds a user to a group.
-	void addMember(string id, User.ID user_id);
+	void add(string _group, User.ID user_id);
 
 	/// Removes a user from a group.
-	void removeMember(string id, User.ID user_id);
+	void remove(string _group, User.ID _user);
 }
 
 alias Group = userman.db.controller.Group;
@@ -183,8 +200,8 @@ private class UserManAPIImpl : UserManAPI {
 		m_settings.serviceEmail = ctrl.settings.serviceEmail;
 	}
 
-	@property UserManUserAPIImpl users() { return m_users; }
-	@property UserManGroupAPIImpl groups() { return m_groups; }
+	@property Collection!UserManUserAPI users() { return Collection!UserManUserAPI(m_users); }
+	@property Collection!UserManGroupAPI groups() { return Collection!UserManGroupAPI(m_groups); }
 	@property APISettings settings() { return m_settings; }
 }
 
@@ -325,12 +342,16 @@ private class UserManUserAPIImpl : UserManUserAPI {
 private class UserManGroupAPIImpl : UserManGroupAPI {
 	private {
 		UserManController m_ctrl;
+		UserManGroupMemberAPIImpl m_members;
 	}
 
 	this(UserManController ctrl)
 	{
 		m_ctrl = ctrl;
+		m_members = new UserManGroupMemberAPIImpl(ctrl);
 	}
+
+	Collection!UserManGroupMemberAPI members(string _group) { return Collection!UserManGroupMemberAPI(m_members, _group); }
 
 	@property long count()
 	{
@@ -368,27 +389,38 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 		m_ctrl.enumerateGroups(first_group, max_count, (ref grp) { ret ~= grp; });
 		return ret;
 	}
+}
 
-	void addMember(string id, User.ID user_id)
-	{
-		m_ctrl.addGroupMember(id, user_id);
+private class UserManGroupMemberAPIImpl : UserManGroupMemberAPI {
+	private {
+		UserManController m_ctrl;
 	}
 
-	void removeMember(string id, User.ID user_id)
+	this(UserManController ctrl)
 	{
-		m_ctrl.removeGroupMember(id, user_id);
+		m_ctrl = ctrl;
 	}
 
-	long getMemberCount(string id)
+	long count(string _group)
 	{
-		return m_ctrl.getGroupMemberCount(id);
+		return m_ctrl.getGroupMemberCount(_group);
 	}
 
-	User.ID[] getMemberRange(string id, long first_member, long max_count)
+	User.ID[] getRange(string _group, long first_member, long max_count)
 	{
 		User.ID[] ret;
-		m_ctrl.enumerateGroupMembers(id, first_member, max_count, (id) { ret ~= id; });
+		m_ctrl.enumerateGroupMembers(_group, first_member, max_count, (id) { ret ~= id; });
 		return ret;
+	}
+
+	void add(string _group, User.ID user_id)
+	{
+		m_ctrl.addGroupMember(_group, user_id);
+	}
+
+	void remove(string _group, User.ID _user)
+	{
+		m_ctrl.removeGroupMember(_group, _user);
 	}
 }
 
