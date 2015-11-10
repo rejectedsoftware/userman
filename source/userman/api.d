@@ -224,7 +224,7 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	{
 		auto ret = m_ctrl.testLogin(name, password);
 		enforceHTTP(!ret.isNull, HTTPStatus.unauthorized, "Wrong user name or password.");
-		return ret;
+		return ret.get();
 	}
 
 	User.ID register(string email, string name, string full_name, string password)
