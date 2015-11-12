@@ -1,7 +1,7 @@
 extends userman.admin.layout
 
 block title
-	- string title = "User "~info.user.name;
+	- title = "User "~info.user.name;
 
 block userman.navigation
 	ul

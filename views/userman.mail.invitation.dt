@@ -1,7 +1,7 @@
 extends userman.mail.layout
 
 block title
-	- auto title = "Invitation mail";
+	- title = "Invitation mail";
 
 block body
 	- import vibe.textfilter.urlencode;

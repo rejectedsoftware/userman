@@ -1,7 +1,7 @@
 extends userman.layout
 
 block title
-	- string title = "Log in";
+	- title = "Log in";
 	
 block body
 	center

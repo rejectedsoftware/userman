@@ -1,7 +1,7 @@
 extends userman.admin.layout
 
 block title
-	- string title = "Group "~info.group.id~" members";
+	- title = "Group "~info.group.id~" members";
 	
 block userman.navigation
 	ul

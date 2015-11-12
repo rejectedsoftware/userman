@@ -1,7 +1,7 @@
 extends userman.admin.layout
 
 block title
-	- string title = "";
+	- title = "";
 	
 block userman.content
 	ul.main-nav

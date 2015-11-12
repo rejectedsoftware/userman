@@ -1,7 +1,7 @@
 extends userman.layout_popup
 
 block title
-	- auto title = "Resend activation mail";
+	- title = "Resend activation mail";
 
 block userman.message
 	- if( error.length )

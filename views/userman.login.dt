@@ -1,7 +1,7 @@
 extends userman.layout
 
 block title
-	- string title = "Login";
+	- title = "Login";
 	
 block userman.content
 	- if( error.length > 0 )

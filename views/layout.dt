@@ -1,6 +1,7 @@
 !!! 5
 html
 	head
+		- string title;
 		block title
 		title= title
 		block head
