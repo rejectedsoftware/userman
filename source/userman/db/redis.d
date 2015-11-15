@@ -135,7 +135,7 @@ class RedisUserManController : UserManController {
 		// TODO: avoid going over all (potentially large number of) groups
 		string[] groups;
 		foreach (gid, grp; m_groups)
-			if (m_redisDB.sisMember("userman:group:" ~ gid.to!string ~ ":members", id))
+			if (m_redisDB.sisMember("userman:group:" ~ gid.to!string ~ ":members", id.toString()))
 				groups ~= grp.id;
 
 		// Credentials
@@ -372,14 +372,14 @@ class RedisUserManController : UserManController {
 	{
 		auto grpid = m_groupsByName.get(group, -1);
 		enforce(grpid != -1, "The specified group name is unknown.");
-		m_redisDB.sadd("userman:group:" ~ grpid.to!string ~ ":members", user);
+		m_redisDB.sadd("userman:group:" ~ grpid.to!string ~ ":members", user.toString());
 	}
 
 	override void removeGroupMember(string group, User.ID user)
 	{
 		auto grpid = m_groupsByName.get(group, -1);
 		enforce(grpid != -1, "The specified group name is unknown.");
-		m_redisDB.srem("userman:group:" ~ grpid.to!string ~ ":members", user);
+		m_redisDB.srem("userman:group:" ~ grpid.to!string ~ ":members", user.toString());
 	}
 
 	override long getGroupMemberCount(string group)

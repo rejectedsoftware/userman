@@ -61,12 +61,12 @@ class FileUserManController : UserManController {
 			usr.resetCodeExpireTime = SysTime(0);
 
 		// Indexes
-		writeFileUTF8(userByEmailFile(usr.email), Json(usr.id).toString());
+		writeJsonFile(userByEmailFile(usr.email), usr.id);
 		scope (failure) removeFile(userByEmailFile(usr.email));
-		writeFileUTF8(userByNameFile(usr.name), Json(usr.id).toString());
+		writeJsonFile(userByNameFile(usr.name), usr.id);
 		scope (failure) removeFile(userByNameFile(usr.name));
 
-		writeFileUTF8(userFile(usr.id), serializeToPrettyJson(usr));
+		writeJsonFile(userFile(usr.id), usr);
 
 		return usr.id;
 	}
@@ -159,7 +159,7 @@ class FileUserManController : UserManController {
 		}
 		scope (failure) moveFile(newnamefile, oldnamefile);
 
-		writeFileUTF8(userFile(user.id), serializeToPrettyJson(user));
+		writeJsonFile(userFile(user.id), user);
 	}
 	
 	override void setEmail(User.ID user, string email)
@@ -208,7 +208,7 @@ class FileUserManController : UserManController {
 		Group grp;
 		grp.id = id;
 		grp.description = description;
-		writeFileUTF8(groupFile(grp.id), serializeToJsonString(grp));
+		writeJsonFile(groupFile(grp.id), grp);
 	}
 
 	override void removeGroup(string id)
@@ -220,7 +220,7 @@ class FileUserManController : UserManController {
 	{
 		auto grp = getGroup(name);
 		grp.description = description;
-		writeFileUTF8(groupFile(name), serializeToJsonString(grp));
+		writeJsonFile(groupFile(name), grp);
 	}
 
 	override long getGroupCount()
@@ -292,4 +292,9 @@ class FileUserManController : UserManController {
 			del(u.id);
 		});
 	}
+}
+
+private void writeJsonFile(T)(Path filename, T value)
+{
+	writeFileUTF8(filename, value.serializeToPrettyJson());
 }

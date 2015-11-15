@@ -25,7 +25,7 @@ struct ID(KIND)
 		IDType m_type;
 	}
 
-	alias toString this;
+	//alias toString this;
 
 	this(long id) { this = id; }
 	this(BsonObjectID id) { this = id; }
@@ -35,11 +35,11 @@ struct ID(KIND)
 	@property long longValue() const { assert(m_type == IDType.long_); return m_long; }
 	@property UUID uuidValue() const { assert(m_type == IDType.uuid); return m_uuid; }
 
-	void opAssign(long id) { m_type = IDType.long_; m_long = id; }
-	void opAssign(BsonObjectID id) { m_type = IDType.bsonObjectID; m_bsonObjectID = id; }
-	void opAssign(UUID id) { m_type = IDType.uuid; m_uuid = id; }
+	void opAssign(long id) @nogc { m_type = IDType.long_; m_long = id; }
+	void opAssign(BsonObjectID id) @nogc { m_type = IDType.bsonObjectID; m_bsonObjectID = id; }
+	void opAssign(UUID id) @nogc { m_type = IDType.uuid; m_uuid = id; }
 	void opAssign(ID id)
-	{
+	@nogc {
 		final switch (id.m_type) {
 			case IDType.long_: this = id.m_long; break;
 			case IDType.bsonObjectID: this = id.m_bsonObjectID; break;

@@ -75,7 +75,7 @@ deprecated void updateProfile(UserManController controller, User user, HTTPServe
 
 
 /**
-	Used to privide request authentication for web applications.
+	Used to provide request authentication for web applications.
 */
 class UserManWebAuthenticator {
 	private {
@@ -269,7 +269,7 @@ class UserManWebInterface {
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
-		m_sessUserID = user.id;
+		m_sessUserID = user.id.toString();
 		.redirect(redirect.length ? redirect : m_prefix);
 	}
 	
@@ -331,7 +331,7 @@ class UserManWebInterface {
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
-		m_sessUserID = user.id;
+		m_sessUserID = user.id.toString();
 		render!("userman.activate.dt");
 	}
 	
