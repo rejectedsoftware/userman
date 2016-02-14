@@ -109,7 +109,7 @@ class UserManController {
 				auto msg = new MemoryOutputStream;
 				auto serviceName = m_settings.serviceName;
 				auto serviceUrl = m_settings.serviceUrl;
-				parseDietFile!("userman.mail.invitation.dt", user, serviceName, serviceUrl)(msg);
+				compileDietFile!("userman.mail.invitation.dt", user, serviceName, serviceUrl)(msg);
 
 				auto mail = new Mail;
 				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -147,7 +147,7 @@ class UserManController {
 		auto msg = new MemoryOutputStream;
 		auto serviceName = m_settings.serviceName;
 		auto serviceUrl = m_settings.serviceUrl;
-		parseDietFile!("userman.mail.activation.dt", user, serviceName, serviceUrl)(msg);
+		compileDietFile!("userman.mail.activation.dt", user, serviceName, serviceUrl)(msg);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -173,7 +173,7 @@ class UserManController {
 			auto msg = new MemoryOutputStream;
 			auto user = &usr;
 			auto settings = m_settings;
-			parseDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
+			compileDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
 
 			auto mail = new Mail;
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
