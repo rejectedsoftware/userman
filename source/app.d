@@ -9,6 +9,9 @@
 */
 module app;
 
+import vibe.core.args;
+import vibe.core.core;
+import vibe.core.log;
 import vibe.http.fileserver;
 import vibe.http.router;
 import vibe.http.server;
@@ -19,7 +22,23 @@ import userman.webadmin;
 
 shared static this()
 {
+	ushort restport = 0;
+	string restintf = "127.0.0.1";
+	ushort webport = 0;
+	string webintf = "127.0.0.1";
+	readOption("admin-port", &webport, "TCP port to listen use for a web admin interface.");
+	readOption("admin-intf", &webintf, "Network interface address to use for the web admin interface (127.0.0.1 by default)");
+	readOption("rest-port", &restport, "TCP port to listen for REST API requests.");
+	readOption("rest-intf", &restintf, "Network interface address to use for the REST API server (127.0.0.1 by default)");
+
 	// TODO: read settings.json
+
+	if (!restport && !webport) {
+		logInfo("Neither -rest-port, nor -web-port specified. Exiting.");
+		logInfo("Run with --help to get a list of possible command line options.");
+		runTask({ exitEventLoop(); });
+		return;
+	}
 
 	auto usettings = new UserManSettings;
 	usettings.requireAccountValidation = false;
@@ -28,13 +47,27 @@ shared static this()
 	auto uctrl = createUserManController(usettings);
 	auto api = createLocalUserManAPI(uctrl);
 
-	auto router = new URLRouter;
-	router.registerUserManWebAdmin(api);
-	//router.registerUserManRestInterface(uctrl);
-	router.get("*", serveStaticFiles("public/"));
-	
-	auto settings = new HTTPServerSettings;
-	settings.sessionStore = new MemorySessionStore;
-	settings.port = 8080;
-	listenHTTP(settings, router);
+
+	if (webport) {
+		auto router = new URLRouter;
+		router.registerUserManWebAdmin(api);
+		//router.registerUserManRestInterface(uctrl);
+		router.get("*", serveStaticFiles("public/"));
+
+		auto settings = new HTTPServerSettings;
+		settings.bindAddresses = [webintf];
+		settings.sessionStore = new MemorySessionStore;
+		settings.port = webport;
+		listenHTTP(settings, router);
+	}
+
+	if (restport) {
+		auto router = new URLRouter;
+		router.registerUserManRestInterface(uctrl);
+
+		auto settings = new HTTPServerSettings;
+		settings.bindAddresses = [restintf];
+		settings.port = restport;
+		listenHTTP(settings, router);
+	}
 }
