@@ -1,7 +1,7 @@
 /**
 	Local and REST API access.
 
-	Copyright: © 2015 RejectedSoftware e.K.
+	Copyright: © 2015-2016 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -66,6 +66,9 @@ interface UserManUserAPI {
 	/// Gets the total number of registered users.
 	@property long count();
 
+	/// Accesses the properties of a user.
+	@property Collection!UserManUserPropertyAPI properties(User.ID _id);
+
 	/// Tests a username/e-mail and password combination for validity.
 	User.ID testLogin(string name, string password);
 
@@ -122,10 +125,47 @@ interface UserManUserAPI {
 	void setBanned(User.ID _id, bool banned);
 
 	/// Sets a custom user account property.
-	void setProperty(User.ID _id, string name, Json value);
+	deprecated void setProperty(User.ID _id, string name, Json value);
 
 	/// Removes a user account property.
-	void removeProperty(User.ID _id, string name);
+	deprecated void removeProperty(User.ID _id, string name);
+
+	/// Returns the names of all groups the user is in.
+	string[] getGroups(User.ID _id);
+}
+
+interface UserManUserPropertyAPI {
+	struct CollectionIndices {
+		User.ID _user;
+		string _name;
+	}
+
+	Json[string] get(User.ID _user);
+	Json get(User.ID _user, string _name);
+	void set(User.ID _user, string _name, Json value);
+	void remove(User.ID _user, string _name);
+}
+
+struct User {
+	alias ID = userman.db.controller.User.ID;
+	ID id;
+	bool active;
+	bool banned;
+	string name;
+	string fullName;
+	string email;
+	//string[] groups;
+	//Json[string] properties;
+
+	this(userman.db.controller.User usr)
+	{
+		this.id = usr.id;
+		this.active = usr.active;
+		this.banned = usr.banned;
+		this.name = usr.name;
+		this.fullName = usr.fullName;
+		this.email = usr.email;
+	}
 }
 
 /// Interface suitable for manipulating group information
@@ -177,8 +217,17 @@ interface UserManGroupMemberAPI {
 	void remove(string _group, User.ID _user);
 }
 
-alias Group = userman.db.controller.Group;
-alias User = userman.db.controller.User;
+struct Group {
+	string id;
+	string description;
+	//Json[string] properties;
+
+	this(userman.db.controller.Group grp)
+	{
+		this.id = grp.id;
+		this.description = grp.description;
+	}
+}
 
 private class UserManAPIImpl : UserManAPI {
 	private {
@@ -208,16 +257,23 @@ private class UserManAPIImpl : UserManAPI {
 private class UserManUserAPIImpl : UserManUserAPI {
 	private {
 		UserManController m_ctrl;
+		UserManUserPropertyAPIImpl m_properties;
 	}
 
 	this(UserManController ctrl)
 	{
 		m_ctrl = ctrl;
+		m_properties = new UserManUserPropertyAPIImpl(m_ctrl);
 	}
 
 	@property long count()
 	{
 		return m_ctrl.getUserCount();
+	}
+
+	@property Collection!UserManUserPropertyAPI properties(User.ID _id)
+	{
+		return Collection!UserManUserPropertyAPI(m_properties, _id);
 	}
 
 	User.ID testLogin(string name, string password)
@@ -259,29 +315,30 @@ private class UserManUserAPIImpl : UserManUserAPI {
 
 	User get(User.ID id)
 	{
-		return m_ctrl.getUser(id);
+		return User(m_ctrl.getUser(id));
 	}
 
 	User getByName(string q)
 	{
-		return m_ctrl.getUserByName(q);
+		return User(m_ctrl.getUserByName(q));
 	}
 
 	User getByEmail(string q)
 	{
-		return m_ctrl.getUserByEmail(q);
+		return User(m_ctrl.getUserByEmail(q));
 	}
 
 	User getByEmailOrName(string q)
 	{
-		return m_ctrl.getUserByEmailOrName(q);
+		return User(m_ctrl.getUserByEmailOrName(q));
 	}
 
 	User[] getRange(int first_user, int max_count)
 	{
-		User[] ret;
-		m_ctrl.enumerateUsers(first_user, max_count, (ref usr) { ret ~= usr; });
-		return ret;
+		import std.array : appender;
+		auto ret = appender!(User[]);
+		m_ctrl.enumerateUsers(first_user, max_count, (ref usr) { ret ~= User(usr); });
+		return ret.data;
 	}
 
 	void remove(User.ID id)
@@ -337,6 +394,45 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	{
 		m_ctrl.removeProperty(id, name);
 	}
+
+	string[] getGroups(User.ID id)
+	{
+		return m_ctrl.getUser(id).groups;
+	}
+}
+
+private class UserManUserPropertyAPIImpl : UserManUserPropertyAPI {
+	private {
+		UserManController m_ctrl;
+	}
+
+	this(UserManController ctrl)
+	{
+		m_ctrl = ctrl;
+	}
+
+	final override Json[string] get(User.ID _user)
+	{
+		return m_ctrl.getUser(_user).properties;
+	}
+
+	final override Json get(User.ID _user, string _name)
+	{
+		auto props = m_ctrl.getUser(_user).properties;
+		auto pv = _name in props;
+		enforceHTTP(pv !is null, HTTPStatus.notFound, "Property does not exist.");
+		return *pv;
+	}
+
+	final override void set(User.ID _user, string _name, Json value)
+	{
+		m_ctrl.setProperty(_user, _name, value);
+	}
+
+	final override void remove(User.ID _user, string _name)
+	{
+		m_ctrl.removeProperty(_user, _name);
+	}
 }
 
 private class UserManGroupAPIImpl : UserManGroupAPI {
@@ -380,14 +476,15 @@ private class UserManGroupAPIImpl : UserManGroupAPI {
 
 	Group get(string id)
 	{
-		return m_ctrl.getGroup(id);
+		return Group(m_ctrl.getGroup(id));
 	}
 
 	Group[] getRange(long first_group, long max_count)
 	{
-		Group[] ret;
-		m_ctrl.enumerateGroups(first_group, max_count, (ref grp) { ret ~= grp; });
-		return ret;
+		import std.array : appender;
+		auto ret = appender!(Group[]);
+		m_ctrl.enumerateGroups(first_group, max_count, (ref grp) { ret ~= Group(grp); });
+		return ret.data;
 	}
 }
 

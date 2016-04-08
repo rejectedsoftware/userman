@@ -8,7 +8,7 @@
 module userman.web;
 
 public import userman.api;
-import userman.db.controller;
+import userman.db.controller : UserManController;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
@@ -257,8 +257,8 @@ class UserManWebInterface {
 	{
 		User user;
 		try {
-			user = m_api.users.getByEmailOrName(name);
-			enforce(testSimplePasswordHash(user.auth.passwordHash, password), "Wrong password.");
+			auto uid = m_api.users.testLogin(name, password);
+			user = m_api.users[uid].get();
 		} catch (Exception e) {
 			logDebug("Error logging in: %s", e.toString().sanitize);
 			throw new Exception("Invalid user/email or password.");

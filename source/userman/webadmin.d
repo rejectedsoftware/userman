@@ -63,7 +63,7 @@ private class UserManWebAdminInterface {
 
 		auto user = m_api.users[uid].get();
 		enforce(user.active, "The account is not yet activated.");
-		enforce(user.groups.canFind(adminGroupName), "User is not an administrator.");
+		enforce(m_api.users[uid].getGroups().canFind(adminGroupName), "User is not an administrator.");
 
 		m_authUser = user.id;
 		m_authUserDisplayName = user.fullName;
@@ -138,10 +138,12 @@ private class UserManWebAdminInterface {
 	{
 		static struct Info {
 			User user;
+			Json[string] userProperties;
 			string error;
 		}
 		Info info;
 		info.user = m_api.users[_user].get();
+		info.userProperties = m_api.users[_user].properties.get();
 		info.error = _error;
 		render!("userman.admin.user.dt", info);
 	}
@@ -170,8 +172,8 @@ private class UserManWebAdminInterface {
 		import vibe.data.json : parseJson;
 
 		if (!old_name.isNull() && old_name != name)
-			m_api.users[_user].removeProperty(old_name);
-		if (name.length) m_api.users[_user].setProperty(name, parseJson(value));
+			m_api.users[_user].properties[old_name].remove();
+		if (name.length) m_api.users[_user].properties[name].set(parseJson(value));
 		redirect("./");
 	}
 
