@@ -19,6 +19,7 @@ import vibe.web.web;
 import std.algorithm : min, max;
 import std.conv : to;
 import std.exception;
+import std.typecons : Nullable;
 
 
 /**
@@ -29,7 +30,8 @@ void registerUserManWebAdmin(URLRouter router, UserManAPI api)
 	router.registerWebInterface(new UserManWebAdminInterface(api));
 }
 
-private class UserManWebAdminInterface {
+/// private
+class UserManWebAdminInterface {
 	enum adminGroupName = "userman.admins";
 
 	private {
@@ -54,9 +56,12 @@ private class UserManWebAdminInterface {
 	@errorDisplay!getLogin
 	void postLogin(string name, string password, string redirect = "/")
 	{
+		import std.algorithm.searching : canFind;
+
 		User.ID uid;
 		try uid = m_api.users.testLogin(name, password);
 		catch (Exception e) {
+			import std.encoding : sanitize;
 			logDebug("Error logging in: %s", e.toString().sanitize);
 			throw new Exception("Invalid user/email or password.");
 		}
@@ -136,6 +141,8 @@ private class UserManWebAdminInterface {
 	@auth @path("/users/:user/")
 	void getUser(AuthInfo auth, User.ID _user, string _error = null)
 	{
+		import vibe.data.json : Json;
+
 		static struct Info {
 			User user;
 			Json[string] userProperties;
@@ -369,6 +376,7 @@ struct ValidGroupName {
 	{
 		import vibe.utils.validation : validateIdent;
 		import std.algorithm : splitter;
+		import std.array : appender;
 
 		// work around disabled default construction
 		auto ret = Nullable!ValidGroupName(ValidGroupName(null));

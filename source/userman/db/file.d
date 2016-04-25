@@ -274,6 +274,7 @@ class FileUserManController : UserManController {
 
 	override long getGroupMemberCount(string group)
 	{
+		import std.algorithm : canFind;
 		long ret = 0;
 		enumerateUsers(0, long.max, (ref u) {
 			if (u.groups.canFind(group))
@@ -284,6 +285,7 @@ class FileUserManController : UserManController {
 
 	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
 	{
+		import std.algorithm : canFind;
 		long cnt = 0;
 		enumerateUsers(0, long.max, (ref u) {
 			if (!u.groups.canFind(group)) return;

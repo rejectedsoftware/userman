@@ -11,7 +11,9 @@ import userman.db.controller;
 
 import vibe.db.mongo.mongo;
 
+import std.exception : enforce;
 import std.string;
+import std.typecons : tuple;
 
 
 class MongoUserManController : UserManController {
@@ -33,8 +35,8 @@ class MongoUserManController : UserManController {
 		m_users = db["userman.users"];
 		m_groups = db["userman.groups"];
 
-		m_users.ensureIndex(["name": 1], IndexFlags.Unique);
-		m_users.ensureIndex(["email": 1], IndexFlags.Unique);
+		m_users.ensureIndex([tuple("name", 1)], IndexFlags.Unique);
+		m_users.ensureIndex([tuple("email", 1)], IndexFlags.Unique);
 	}
 
 	override bool isEmailRegistered(string email)
@@ -87,6 +89,7 @@ class MongoUserManController : UserManController {
 
 	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
 	{
+		import std.conv : to;
 		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user.to!int, max_count.to!int)) {
 			if (max_count-- <= 0) break;
 			del(usr);
@@ -161,7 +164,8 @@ class MongoUserManController : UserManController {
 
 	override long getGroupCount()
 	{
-		return m_groups.count(vibe.data.bson.Bson.emptyObject);
+		import vibe.data.bson : Bson;
+		return m_groups.count(Bson.emptyObject);
 	}
 
 	override Group getGroup(string name)
@@ -173,6 +177,7 @@ class MongoUserManController : UserManController {
 
 	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
 	{
+		import std.conv : to;
 		foreach (grp; m_groups.find!Group(["query": null, "orderby": ["id": 1]], null, QueryFlags.None, first_group.to!int, max_count.to!int)) {
 			if (max_count-- <= 0) break;
 			del(grp);

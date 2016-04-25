@@ -18,6 +18,7 @@ import vibe.utils.validation;
 import vibe.web.web;
 
 import std.exception;
+import std.typecons : Nullable;
 
 
 /**
@@ -260,6 +261,7 @@ class UserManWebInterface {
 			auto uid = m_api.users.testLogin(name, password);
 			user = m_api.users[uid].get();
 		} catch (Exception e) {
+			import std.encoding : sanitize;
 			logDebug("Error logging in: %s", e.toString().sanitize);
 			throw new Exception("Invalid user/email or password.");
 		}
@@ -319,6 +321,7 @@ class UserManWebInterface {
 			m_api.users.resendActivation(email);
 			render!("userman.resend_activation_done.dt");
 		} catch (Exception e) {
+			import std.encoding : sanitize;
 			logDebug("Error sending activation mail: %s", e.toString().sanitize);
 			throw new Exception("Failed to send activation mail. Please try again later. ("~e.msg~").");
 		}
