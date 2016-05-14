@@ -146,7 +146,7 @@ unittest {
 	import vibe.http.server;
 	import vibe.web.web;
 
-	@requireAuth
+	@requiresAuth
 	class MyWebService {
 		private {
 			UserManWebAuthenticator m_auth;
