@@ -1,6 +1,6 @@
 extends layout
 
-block head
+prepend userman.head
 	link(rel="stylesheet", href="#{req.rootDir}styles/userman.css")
 	block userman.title
 	- if (title.length) title ~= " - ";
