@@ -15,6 +15,7 @@ import vibe.crypto.passwordhash;
 import vibe.http.router;
 import vibe.textfilter.urlencode;
 import vibe.utils.validation;
+import vibe.web.auth;
 import vibe.web.web;
 
 import std.exception;
@@ -145,6 +146,7 @@ unittest {
 	import vibe.http.server;
 	import vibe.web.web;
 
+	@requireAuth
 	class MyWebService {
 		private {
 			UserManWebAuthenticator m_auth;
@@ -156,25 +158,22 @@ unittest {
 		}
 
 		// this route can be accessed publicly (/)
+		@noAuth
 		void getIndex()
 		{
 			//render!"welcome.dt"
 		}
 
 		// the @authenticated attribute (defined below) ensures that this route
-		// (/private_page) can only ever be accessed when the user is logged in
-		@authenticated
-		void getPrivatePage(User _user)
+		// (/private_page) can only ever be accessed if the user is logged in
+		@anyAuth
+		void getPrivatePage(User user)
 		{
 			// render a private page with some user specific information
-			//render!("private_page.dt", _user);
+			//render!("private_page.dt", user);
 		}
 
-		// Define a custom attribute for authenticated routes
-		private enum authenticated = before!performAuth("_user");
-		mixin PrivateAccessProxy; // needed so that performAuth can be private
-		// our custom authentication routine, could return any other type, too
-		private User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+		@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
 		{
 			return m_auth.performAuth(req, res);
 		}
@@ -221,6 +220,7 @@ unittest {
 	The typical approach is to use $(D registerUserManWebInterface) instead of
 	directly using this class.
 */
+@requiresAuth
 class UserManWebInterface {
 	private {
 		UserManAPI m_api;
@@ -246,6 +246,7 @@ class UserManWebInterface {
 		this(createLocalUserManAPI(controller), prefix);
 	}
 	
+	@noAuth
 	void getLogin(string redirect = "", string _error = "")
 	{
 		string error = _error;
@@ -253,7 +254,7 @@ class UserManWebInterface {
 		render!("userman.login.dt", error, redirect, settings);
 	}
 
-	@errorDisplay!getLogin	
+	@noAuth @errorDisplay!getLogin	
 	void postLogin(string name, string password, string redirect = "")
 	{
 		User user;
@@ -275,6 +276,7 @@ class UserManWebInterface {
 		.redirect(redirect.length ? redirect : m_prefix);
 	}
 	
+	@noAuth
 	void getLogout(HTTPServerResponse res)
 	{
 		terminateSession();
@@ -282,6 +284,7 @@ class UserManWebInterface {
 		render!("userman.logout.dt");
 	}
 
+	@noAuth
 	void getRegister(string _error = "")
 	{
 		string error = _error;
@@ -289,7 +292,7 @@ class UserManWebInterface {
 		render!("userman.register.dt", error, settings);
 	}
 	
-	@errorDisplay!getRegister
+	@noAuth @errorDisplay!getRegister
 	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
@@ -308,13 +311,14 @@ class UserManWebInterface {
 		}
 	}
 	
+	@noAuth
 	void getResendActivation(string _error = "")
 	{
 		string error = _error;
 		render!("userman.resend_activation.dt", error);
 	}
 
-	@errorDisplay!getResendActivation
+	@noAuth @errorDisplay!getResendActivation
 	void postResendActivation(ValidEmail email)
 	{
 		try {
@@ -327,6 +331,7 @@ class UserManWebInterface {
 		}
 	}
 
+	@noAuth
 	void getActivate(ValidEmail email, string code)
 	{
 		m_api.users.activate(email, code);
@@ -338,13 +343,14 @@ class UserManWebInterface {
 		render!("userman.activate.dt");
 	}
 	
+	@noAuth
 	void getForgotLogin(string _error = "")
 	{
 		auto error = _error;
 		render!("userman.forgot_login.dt", error);
 	}
 
-	@errorDisplay!getForgotLogin
+	@noAuth @errorDisplay!getForgotLogin
 	void postForgotLogin(ValidEmail email)
 	{
 		try {
@@ -357,13 +363,14 @@ class UserManWebInterface {
 		render!("userman.forgot_login_sent.dt");
 	}
 
+	@noAuth
 	void getResetPassword(string _error = "")
 	{
 		string error = _error;
 		render!("userman.reset_password.dt", error);
 	}
 
-	@errorDisplay!getResetPassword
+	@noAuth @errorDisplay!getResetPassword
 	void postResetPassword(ValidEmail email, string code, ValidPassword password, Confirm!"password" password_confirmation, HTTPServerResponse res)
 	{
 		m_api.users.resetPassword(email, code, password);
@@ -371,7 +378,7 @@ class UserManWebInterface {
 		render!("userman.reset_password_done.dt");
 	}
 
-	@auth
+	@anyAuth
 	void getProfile(HTTPServerRequest req, User _user, string _error = "")
 	{
 		req.form["full_name"] = _user.fullName;
@@ -382,18 +389,14 @@ class UserManWebInterface {
 		render!("userman.profile.dt", user, useUserNames, error);
 	}
 	
-	@auth @errorDisplay!getProfile
+	@anyAuth @errorDisplay!getProfile
 	void postProfile(HTTPServerRequest req, User _user)
 	{
 		updateProfile(m_api, _user.id, req);
 		redirect(m_prefix);
 	}
 
-	// Attribute for authenticated routes
-	private enum auth = before!performAuth("_user");
-	mixin PrivateAccessProxy;
-
-	private User performAuth(HTTPServerRequest req, HTTPServerResponse res)
+	@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		return m_auth.performAuth(req, res);
 	}

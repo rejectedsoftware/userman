@@ -14,6 +14,7 @@ import vibe.crypto.passwordhash;
 import vibe.http.router;
 import vibe.textfilter.urlencode;
 import vibe.utils.validation;
+import vibe.web.auth;
 import vibe.web.web;
 
 import std.algorithm : min, max;
@@ -31,6 +32,7 @@ void registerUserManWebAdmin(URLRouter router, UserManAPI api)
 }
 
 /// private
+@requiresAuth
 class UserManWebAdminInterface {
 	enum adminGroupName = "userman.admins";
 
@@ -46,6 +48,7 @@ class UserManWebAdminInterface {
 		m_api = api;
 	}
 
+	@noAuth
 	void getLogin(string redirect = "/", string _error = null)
 	{
 		bool first_user = m_api.users.count == 0;
@@ -53,7 +56,7 @@ class UserManWebAdminInterface {
 		render!("userman.admin.login.dt", first_user, error, redirect);
 	}
 
-	@errorDisplay!getLogin
+	@noAuth @errorDisplay!getLogin
 	void postLogin(string name, string password, string redirect = "/")
 	{
 		import std.algorithm.searching : canFind;
@@ -75,7 +78,7 @@ class UserManWebAdminInterface {
 		.redirect(redirect);
 	}
 
-	@errorDisplay!getLogin
+	@noAuth @errorDisplay!getLogin
 	void postInitialRegister(ValidUsername username, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation, string redirect = "/")
 	{
 		enforceHTTP(m_api.users.count == 0, HTTPStatus.forbidden, "Cannot create initial admin account when other accounts already exist.");
@@ -88,13 +91,16 @@ class UserManWebAdminInterface {
 		.redirect(redirect);
 	}
 
-	void getLogout()
+	@noAuth void getLogout()
 	{
 		terminateSession();
 		redirect("/");	
 	}
 
-	@auth
+
+	// everything below requires authentication
+	@anyAuth:
+
 	void get(AuthInfo auth)
 	{
 		render!("userman.admin.index.dt");
@@ -104,7 +110,6 @@ class UserManWebAdminInterface {
 	/* Users */
 	/**************************************************************************/
 
-	@auth
 	void getUsers(AuthInfo auth, int page = 1, string _error = null)
 	{
 		static struct Info {
@@ -122,14 +127,14 @@ class UserManWebAdminInterface {
 		render!("userman.admin.users.dt", info);
 	}
 
-	@auth @errorDisplay!getUsers
+	@errorDisplay!getUsers
 	void postUsers(AuthInfo auth, ValidUsername name, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation)
 	{
 		m_api.users.register(email, name, full_name, password);
 		redirect("users");
 	}
 
-	@auth @path("/users/multi") @errorDisplay!getUsers
+	@path("/users/multi") @errorDisplay!getUsers
 	void postMultiUserUpdate(AuthInfo auth, string action, HTTPServerRequest req, /*User.ID[] selection,*/ int page = 1)
 	{
 		import std.algorithm : map;
@@ -138,7 +143,7 @@ class UserManWebAdminInterface {
 		redirect(page > 1 ? "/users?page="~page.to!string : "/users");
 	}
 
-	@auth @path("/users/:user/")
+	@path("/users/:user/")
 	void getUser(AuthInfo auth, User.ID _user, string _error = null)
 	{
 		import vibe.data.json : Json;
@@ -155,7 +160,7 @@ class UserManWebAdminInterface {
 		render!("userman.admin.user.dt", info);
 	}
 
-	@auth @path("/users/:user/") @errorDisplay!getUser
+	@path("/users/:user/") @errorDisplay!getUser
 	void postUser(AuthInfo auth, User.ID _user, ValidUsername username, ValidEmail email, string full_name, bool active, bool banned)
 	{
 		//m_api.users[_user].setName(username); // TODO!
@@ -166,14 +171,14 @@ class UserManWebAdminInterface {
 		redirect("/users/"~_user.toString~"/");
 	}
 
-	@auth @path("/users/:user/password") @errorDisplay!getUser
+	@path("/users/:user/password") @errorDisplay!getUser
 	void postUserPassword(AuthInfo auth, User.ID _user, ValidPassword password, Confirm!"password" password_confirmation)
 	{
 		m_api.users[_user].setPassword(password);
 		redirect("/users/"~_user.toString~"/");
 	}
 
-	@auth @path("/users/:user/set_property") @errorDisplay!getUser
+	@path("/users/:user/set_property") @errorDisplay!getUser
 	void postSetUserProperty(AuthInfo auth, User.ID _user, Nullable!string old_name, string name, string value)
 	{
 		import vibe.data.json : parseJson;
@@ -188,7 +193,6 @@ class UserManWebAdminInterface {
 	/* Groups */
 	/**************************************************************************/
 
-	@auth
 	void getGroups(AuthInfo auth, long page = 1, string _error = null)
 	{
 		static struct Info {
@@ -206,14 +210,14 @@ class UserManWebAdminInterface {
 		render!("userman.admin.groups.dt", info);
 	}
 
-	@auth @errorDisplay!getGroups
+	@errorDisplay!getGroups
 	void postGroups(AuthInfo auth, ValidGroupName name, string description)
 	{
 		m_api.groups.create(name, description);
 		redirect("/groups/"~name~"/");
 	}
 
-	@auth @path("/groups/multi") @errorDisplay!getGroups
+	@path("/groups/multi") @errorDisplay!getGroups
 	void postMultiGroupUpdate(AuthInfo auth, string action, HTTPServerRequest req, /*User.ID[] selection,*/ int page = 1)
 	{
 		import std.algorithm : map;
@@ -222,7 +226,7 @@ class UserManWebAdminInterface {
 		redirect(page > 1 ? "/groups?page="~page.to!string : "/groups");
 	}
 
-	@auth @path("/groups/:group/")
+	@path("/groups/:group/")
 	void getGroup(AuthInfo auth, string _group, string _error = null)
 	{
 		static struct Info {
@@ -237,7 +241,7 @@ class UserManWebAdminInterface {
 		render!("userman.admin.group.dt", info);
 	}
 
-	@auth @path("/groups/:group/") @errorDisplay!getGroup
+	@path("/groups/:group/") @errorDisplay!getGroup
 	void postGroup(AuthInfo auth, string _group, string description)
 	{
 		m_api.groups[_group].setDescription(description);
@@ -255,7 +259,7 @@ class UserManWebAdminInterface {
 		redirect("./");
 	}*/
 
-	@auth @path("/groups/:group/members/")
+	@path("/groups/:group/members/")
 	void getGroupMembers(AuthInfo auth, string _group, long page = 1, string _error = null)
 	{
 		import std.algorithm : map;
@@ -279,7 +283,7 @@ class UserManWebAdminInterface {
 		render!("userman.admin.group.members.dt", info);
 	}
 
-	@auth @path("/groups/:group/members/:user/remove") @errorDisplay!getGroupMembers
+	@path("/groups/:group/members/:user/remove") @errorDisplay!getGroupMembers
 	void postRemoveMember(AuthInfo auth, string _group, User.ID _user)
 	{
 		enforce(_group != adminGroupName || _user != auth.user.id,
@@ -288,7 +292,7 @@ class UserManWebAdminInterface {
 		redirect("/groups/"~_group~"/members/");
 	}
 
-	@auth @path("/groups/:group/members/") @errorDisplay!getGroupMembers
+	@path("/groups/:group/members/") @errorDisplay!getGroupMembers
 	void postAddMember(AuthInfo auth, string _group, string username)
 	{
 		auto uid = m_api.users.getByName(username).id;
@@ -300,7 +304,7 @@ class UserManWebAdminInterface {
 	/* Settings */
 	/**************************************************************************/
 
-	@auth @path("/settings/")
+	@path("/settings/")
 	void getSettings(AuthInfo auth, string _error = null)
 	{
 		struct Info {
@@ -314,7 +318,7 @@ class UserManWebAdminInterface {
 		render!("userman.admin.settings.dt", info);
 	}
 
-	@auth @path("/settings/") @errorDisplay!getSettings
+	@path("/settings/") @errorDisplay!getSettings
 	void posttSettings(AuthInfo auth)
 	{
 		// TODO!
@@ -348,9 +352,7 @@ class UserManWebAdminInterface {
 		}
 	}
 
-	mixin PrivateAccessProxy;
-	enum auth = before!handleAuth("auth");
-	private AuthInfo handleAuth(HTTPServerRequest req, HTTPServerResponse res)
+	@noRoute AuthInfo authenticate(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		if (m_authUser == User.ID.init) {
 			redirect("/login?redirect="~req.path.urlEncode);
