@@ -78,6 +78,11 @@ deprecated void updateProfile(UserManController controller, User user, HTTPServe
 
 /**
 	Used to provide request authentication for web applications.
+
+	Note that it is generally recommended to use the `vibe.web.auth` mechanism
+	together with `authenticate` instead of using this class.
+
+	See_also: `authenticate`
 */
 class UserManWebAuthenticator {
 	private {
@@ -137,55 +142,6 @@ class UserManWebAuthenticator {
 	}
 }
 
-/** This example uses the $(D @before) annotation supported by the
-	$(D vibe.web.web) framework for a concise and statically defined
-	authentication approach.
-*/
-unittest {
-	import vibe.http.router;
-	import vibe.http.server;
-	import vibe.web.web;
-
-	@requiresAuth
-	class MyWebService {
-		private {
-			UserManWebAuthenticator m_auth;
-		}
-
-		this(UserManAPI userman)
-		{
-			m_auth = new UserManWebAuthenticator(userman);
-		}
-
-		// this route can be accessed publicly (/)
-		@noAuth
-		void getIndex()
-		{
-			//render!"welcome.dt"
-		}
-
-		// the @authenticated attribute (defined below) ensures that this route
-		// (/private_page) can only ever be accessed if the user is logged in
-		@anyAuth
-		void getPrivatePage(User user)
-		{
-			// render a private page with some user specific information
-			//render!("private_page.dt", user);
-		}
-
-		@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
-		{
-			return m_auth.performAuth(req, res);
-		}
-	}
-
-	void registerMyService(URLRouter router, UserManAPI userman)
-	{
-		router.registerUserManWebInterface(userman);
-		router.registerWebInterface(new MyWebService(userman));
-	}
-}
-
 /** An example using a plain $(D vibe.http.router.URLRouter) based
 	authentication approach.
 */
@@ -215,6 +171,79 @@ unittest {
 }
 
 
+/** Ensures that a user is logged in.
+
+	If a valid session exists, the returned `User` object will contain all
+	information about the logged in user. Otherwise, the response object will
+	be used to redirect the user to the login page and an empty user object
+	is returned.
+
+	Params:
+		req = The request object of the incoming request
+		res = The response object of the incoming request
+		api = A reference to the UserMan API
+		url_prefix = Optional prefix to prepend to the login page path
+*/
+User authenticate(HTTPServerRequest req, HTTPServerResponse res, UserManAPI api, string url_prefix = "")
+{
+	if (!req.session) {
+		res.redirect(url_prefix~"login?redirect="~urlEncode(req.path));
+		return User.init;
+	} else {
+		return api.users.getByName(req.session.get!string("userName"));
+	}
+}
+
+/** This example uses the $(D @before) annotation supported by the
+	$(D vibe.web.web) framework for a concise and statically defined
+	authentication approach.
+*/
+unittest {
+	import vibe.http.router;
+	import vibe.http.server;
+	import vibe.web.web;
+
+	@requiresAuth
+	class MyWebService {
+		private {
+			UserManAPI m_api;
+		}
+
+		this(UserManAPI userman)
+		{
+			m_api = userman;
+		}
+
+		// this route can be accessed publicly (/)
+		@noAuth
+		void getIndex()
+		{
+			//render!"welcome.dt"
+		}
+
+		// the @authenticated attribute (defined below) ensures that this route
+		// (/private_page) can only ever be accessed if the user is logged in
+		@anyAuth
+		void getPrivatePage(User user)
+		{
+			// render a private page with some user specific information
+			//render!("private_page.dt", user);
+		}
+
+		@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
+		{
+			return .authenticate(req, res, m_api);
+		}
+	}
+
+	void registerMyService(URLRouter router, UserManAPI userman)
+	{
+		router.registerUserManWebInterface(userman);
+		router.registerWebInterface(new MyWebService(userman));
+	}
+}
+
+
 /** Web interface class for UserMan, suitable for use with $(D vibe.web.web).
 
 	The typical approach is to use $(D registerUserManWebInterface) instead of
@@ -224,7 +253,6 @@ unittest {
 class UserManWebInterface {
 	private {
 		UserManAPI m_api;
-		UserManWebAuthenticator m_auth;
 		string m_prefix;
 		SessionVar!(string, "userEmail") m_sessUserEmail;
 		SessionVar!(string, "userName") m_sessUserName;
@@ -237,7 +265,6 @@ class UserManWebInterface {
 	{
 		m_api = api;
 		m_settings = api.settings;
-		m_auth = new UserManWebAuthenticator(api);
 		m_prefix = prefix;
 	}
 
@@ -398,6 +425,6 @@ class UserManWebInterface {
 
 	@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
 	{
-		return m_auth.performAuth(req, res);
+		return .authenticate(req, res, m_api, m_prefix);
 	}
 }
