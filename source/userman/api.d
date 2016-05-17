@@ -60,14 +60,14 @@ struct APISettings {
 /// Interface suitable for manipulating user information
 interface UserManUserAPI {
 	struct CollectionIndices {
-		User.ID _id;
+		User.ID _user;
 	}
 
 	/// Gets the total number of registered users.
 	@property long count();
 
 	/// Accesses the properties of a user.
-	@property Collection!UserManUserPropertyAPI properties(User.ID _id);
+	@property Collection!UserManUserPropertyAPI properties(User.ID _user);
 
 	/// Tests a username/e-mail and password combination for validity.
 	User.ID testLogin(string name, string password);
@@ -91,7 +91,7 @@ interface UserManUserAPI {
 	void resetPassword(string email, string reset_code, string new_password);
 
 	/// Gets information about a user.
-	User get(User.ID _id);
+	User get(User.ID _user);
 
 	/// Gets information about a user using the user name as the identifier.
 	User getByName(string q);
@@ -106,32 +106,32 @@ interface UserManUserAPI {
 	User[] getRange(int first_user, int max_count);
 
 	/// Deletes a user account.
-	void remove(User.ID _id);
+	void remove(User.ID _user);
 	//void update(in ref User user);
 
 	/// Updates the e-mail address of a user account.
-	void setEmail(User.ID _id, string email);
+	void setEmail(User.ID _user, string email);
 
 	/// Updates the display name of a user.
-	void setFullName(User.ID _id, string full_name);
+	void setFullName(User.ID _user, string full_name);
 
 	/// Sets a new password.
-	void setPassword(User.ID _id, string password);
+	void setPassword(User.ID _user, string password);
 
 	/// Sets the activation state of a user.
-	void setActive(User.ID _id, bool active);
+	void setActive(User.ID _user, bool active);
 
 	/// Sets the banned state of a user.
-	void setBanned(User.ID _id, bool banned);
+	void setBanned(User.ID _user, bool banned);
 
 	/// Sets a custom user account property.
-	deprecated void setProperty(User.ID _id, string name, Json value);
+	deprecated void setProperty(User.ID _user, string name, Json value);
 
 	/// Removes a user account property.
-	deprecated void removeProperty(User.ID _id, string name);
+	deprecated void removeProperty(User.ID _user, string name);
 
 	/// Returns the names of all groups the user is in.
-	string[] getGroups(User.ID _id);
+	string[] getGroups(User.ID _user);
 }
 
 interface UserManUserPropertyAPI {
