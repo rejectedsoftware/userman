@@ -33,6 +33,7 @@ void registerUserManWebAdmin(URLRouter router, UserManAPI api)
 
 /// private
 @requiresAuth
+@translationContext!TranslationContext
 class UserManWebAdminInterface {
 	enum adminGroupName = "userman.admins";
 
@@ -365,6 +366,12 @@ class UserManWebAdminInterface {
 
 private struct AuthInfo {
 	User user;
+}
+
+private struct TranslationContext {
+	import std.meta : AliasSeq;
+	alias languages = AliasSeq!();
+	//mixin translationModule!"userman";
 }
 
 struct ValidGroupName {

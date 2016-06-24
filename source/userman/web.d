@@ -250,6 +250,7 @@ unittest {
 	directly using this class.
 */
 @requiresAuth
+@translationContext!TranslationContext
 class UserManWebInterface {
 	private {
 		UserManAPI m_api;
@@ -427,4 +428,10 @@ class UserManWebInterface {
 	{
 		return .authenticate(req, res, m_api, m_prefix);
 	}
+}
+
+private struct TranslationContext {
+	import std.meta : AliasSeq;
+	alias languages = AliasSeq!();
+	//mixin translationModule!"userman";
 }
