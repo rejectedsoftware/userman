@@ -70,7 +70,6 @@ struct ID(KIND)
 	}
 }
 
-static assert(isBsonSerializable!(ID!void));
 unittest {
 	assert(serializeToBson(ID!void(BsonObjectID.init)).type == Bson.Type.objectID);
 }

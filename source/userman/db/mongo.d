@@ -11,7 +11,9 @@ import userman.db.controller;
 
 import vibe.db.mongo.mongo;
 
+import std.exception : enforce;
 import std.string;
+import std.typecons : tuple;
 
 
 class MongoUserManController : UserManController {
@@ -33,14 +35,14 @@ class MongoUserManController : UserManController {
 		m_users = db["userman.users"];
 		m_groups = db["userman.groups"];
 
-		m_users.ensureIndex(["name": 1], IndexFlags.Unique);
-		m_users.ensureIndex(["email": 1], IndexFlags.Unique);
+		m_users.ensureIndex([tuple("name", 1)], IndexFlags.Unique);
+		m_users.ensureIndex([tuple("email", 1)], IndexFlags.Unique);
 	}
 
 	override bool isEmailRegistered(string email)
 	{
 		auto bu = m_users.findOne(["email": email], ["auth": true]);
-		return !bu.isNull() && bu.auth.method.get!string.length > 0;
+		return !bu.isNull() && bu["auth"]["method"].get!string.length > 0;
 	}
 	
 	override User.ID addUser(ref User usr)

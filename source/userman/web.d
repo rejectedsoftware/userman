@@ -16,7 +16,9 @@ import vibe.textfilter.urlencode;
 import vibe.utils.validation;
 import vibe.web.web;
 
+import std.encoding : sanitize;
 import std.exception;
+import std.typecons : Nullable;
 
 
 /**
