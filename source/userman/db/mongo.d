@@ -42,7 +42,7 @@ class MongoUserManController : UserManController {
 	override bool isEmailRegistered(string email)
 	{
 		auto bu = m_users.findOne(["email": email], ["auth": true]);
-		return !bu.isNull() && bu.auth.method.get!string.length > 0;
+		return !bu.isNull() && bu["auth"]["method"].get!string.length > 0;
 	}
 	
 	override User.ID addUser(ref User usr)
