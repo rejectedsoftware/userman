@@ -1,0 +1,5 @@
+name "example"
+dependency "userman" path=".."
+targetName "userman_example"
+workingDirectory ".."
+versions "VibeDefaultMain"
