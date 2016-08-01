@@ -73,7 +73,7 @@ class FileUserManController : UserManController {
 
 	override User getUser(User.ID id)
 	{
-		return deserializeJson!User(readFileUTF8(userFile(id)));
+		return readJsonFile!User(userFile(id));
 	}
 
 	override User getUserByName(string name)
@@ -236,7 +236,7 @@ class FileUserManController : UserManController {
 
 	override Group getGroup(string id)
 	{
-		return readFileUTF8(groupFile(id)).deserializeJson!Group;
+		return readJsonFile!Group(groupFile(id));
 	}
 
 	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
@@ -299,4 +299,13 @@ class FileUserManController : UserManController {
 private void writeJsonFile(T)(Path filename, T value)
 {
 	writeFileUTF8(filename, value.serializeToPrettyJson());
+}
+
+private T readJsonFile(T)(Path filename)
+{
+	import vibe.http.common : HTTPStatusException;
+	import vibe.http.status : HTTPStatus;
+	if (!existsFile(filename))
+		throw new HTTPStatusException(HTTPStatus.notFound, "Database object does not exist ("~filename.toNativeString()~").");
+	return readFileUTF8(filename).deserializeJson!T();
 }
