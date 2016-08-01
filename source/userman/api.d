@@ -171,10 +171,10 @@ struct User {
 /// Interface suitable for manipulating group information
 interface UserManGroupAPI {
 	struct CollectionIndices {
-		string _name;
+		string _group;
 	}
 
-	Collection!UserManGroupMemberAPI members(string _name);
+	Collection!UserManGroupMemberAPI members(string _group);
 
 	/// The total number of groups.
 	@property long count();
@@ -183,16 +183,16 @@ interface UserManGroupAPI {
 	void create(string name, string description);
 
 	/// Removes a group.
-	void remove(string _name);
+	void remove(string _group);
 
 	/// Gets information about an existing group.
 	//Group getByID(Group.ID id);
 
 	/// Sets the description of a group.
-	void setDescription(string _name, string description);
+	void setDescription(string _group, string description);
 
 	/// Gets information about a group using its name as the identifier.
-	Group get(string _name);
+	Group get(string _group);
 
 	/// Gets a range of groups, suitable for pagination.
 	Group[] getRange(long first_group, long max_count);
@@ -420,7 +420,7 @@ private class UserManUserPropertyAPIImpl : UserManUserPropertyAPI {
 	{
 		auto props = m_ctrl.getUser(_user).properties;
 		auto pv = _name in props;
-		enforceHTTP(pv !is null, HTTPStatus.notFound, "Property does not exist.");
+		if (!pv) return Json(null);
 		return *pv;
 	}
 
