@@ -12,6 +12,7 @@ block userman.navigation
 
 block userman.content
 	- import std.algorithm : sort;
+	- import std.array : array;
 
 	- if (info.error.length)
 		p.error= info.error
