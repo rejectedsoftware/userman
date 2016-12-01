@@ -1,7 +1,7 @@
 extends userman.layout
 
 block title
-	- string title = "UserMan Demo";
+	- title = "UserMan Demo";
 	
 block userman.content
 	- if (!req.session || !req.session.isKeySet("userFullName"))
