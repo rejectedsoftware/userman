@@ -63,7 +63,7 @@ class RedisUserManController : UserManController {
 
 		long dbIndex = 0;
 		if (!url.path.empty)
-			dbIndex = to!long(url.path.nodes[0].toString());
+			dbIndex = to!long(url.path[0].toString());
 
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
@@ -179,7 +179,8 @@ class RedisUserManController : UserManController {
 		}
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(int first_user, int max_count, scope void delegate(ref User usr) @safe del)
 	{
 		foreach (userId; m_redisDB.zrange!string("userman:user:all", first_user, first_user + max_count)) {
 			auto usr = getUser(User.ID(userId.to!long));

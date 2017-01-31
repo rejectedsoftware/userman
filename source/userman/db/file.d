@@ -97,7 +97,8 @@ class FileUserManController : UserManController {
 		else return getUserByName(email_or_name);
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(int first_user, int max_count, scope void delegate(ref User usr) @safe del)
 	{
 		listDirectory(m_basePath ~ "user/", (de) {
 			if (!de.name.endsWith(".json") || de.isDirectory) return true;

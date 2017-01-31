@@ -84,7 +84,7 @@ class UserManWebAuthenticator {
 	HTTPServerRequestDelegate auth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
-		{
+		@trusted {
 			User usr;
 			try usr = performAuth(req, res);
 			catch (Exception e) throw new HTTPStatusException(HTTPStatus.unauthorized);
@@ -112,7 +112,7 @@ class UserManWebAuthenticator {
 	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
-		{
+		@trusted {
 			if( !req.session ) return;
 			auto usr = m_controller.getUserByName(req.session.get!string("userName"));
 			callback(req, res, usr);

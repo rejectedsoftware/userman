@@ -87,7 +87,8 @@ class MongoUserManController : UserManController {
 		return usr.get;
 	}
 
-	override void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(int first_user, int max_count, scope void delegate(ref User usr) @safe del)
 	{
 		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user, max_count)) {
 			if (max_count-- <= 0) break;

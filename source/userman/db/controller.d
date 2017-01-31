@@ -207,7 +207,10 @@ class UserManController {
 
 	abstract User getUserByEmailOrName(string email_or_name);
 
-	abstract void enumerateUsers(int first_user, int max_count, void delegate(ref User usr) del);
+	abstract void enumerateUsers(int first_user, int max_count, scope void delegate(ref User usr) @safe del);
+	final void enumerateUsers(int first_user, int max_count, scope void delegate(ref User usr) del) {
+		enumerateUsers(first_user, max_count, (ref usr) @trusted { del(usr); });
+	}
 
 	abstract long getUserCount();
 

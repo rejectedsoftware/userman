@@ -5,6 +5,7 @@ block title
 
 block body
 	- import vibe.textfilter.urlencode;
+	- import vibe.inet.path : Path;
 
 	h1 Account activation
 	
