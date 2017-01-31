@@ -64,7 +64,7 @@ class RedisUserManController : UserManController {
 
 		long dbIndex = 0;
 		if (!url.path.empty)
-			dbIndex = to!long(url.path.nodes[0].toString());
+			dbIndex = to!long(url.path[0].toString());
 
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
