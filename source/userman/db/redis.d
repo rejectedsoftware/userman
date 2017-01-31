@@ -182,7 +182,8 @@ class RedisUserManController : UserManController {
 		}
 	}
 
-	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) @safe del)
 	{
 		foreach (userId; m_redisDB.zrange!string("userman:user:all", first_user, first_user + max_count)) {
 			auto usr = getUser(User.ID(userId.to!long));
@@ -360,7 +361,8 @@ class RedisUserManController : UserManController {
 		return sgrp.unstrip(properties);
 	}
 
-	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	alias enumerateGroups = UserManController.enumerateGroups;
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) @safe del)
 	{
 		foreach (id; m_redisDB.zrange!string("userman:group:all", first_group, first_group + max_count)) {
 			auto grp = getGroup(id);
@@ -387,7 +389,8 @@ class RedisUserManController : UserManController {
 		assert(false);
 	}
 
-	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
+	alias enumerateGroupMembers = UserManController.enumerateGroupMembers;
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) @safe del)
 	{
 		assert(false);
 	}

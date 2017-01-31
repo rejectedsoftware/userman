@@ -216,7 +216,10 @@ class UserManController {
 
 	abstract User getUserByEmailOrName(string email_or_name);
 
-	abstract void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del);
+	abstract void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) @safe del);
+	final void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del) {
+		enumerateUsers(first_user, max_count, (ref usr) @trusted { del(usr); });
+	}
 
 	abstract long getUserCount();
 
@@ -234,11 +237,17 @@ class UserManController {
 	abstract void setGroupDescription(string name, string description);
 	abstract long getGroupCount();
 	abstract Group getGroup(string id);
-	abstract void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del);
+	abstract void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) @safe del);
+	final void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del) {
+		enumerateGroups(first_group, max_count, (ref grp) @trusted { del(grp); });
+	}
 	abstract void addGroupMember(string group, User.ID user);
 	abstract void removeGroupMember(string group, User.ID user);
 	abstract long getGroupMemberCount(string group);
-	abstract void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del);
+	abstract void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) @safe del);
+	final void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del) {
+		enumerateGroupMembers(group, first_member, max_count, (usr) @trusted { del(usr); });
+	}
 	deprecated Group getGroupByName(string id) { return getGroup(id); }
 
 	/** Test a group ID for validity.

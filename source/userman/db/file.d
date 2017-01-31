@@ -96,7 +96,8 @@ class FileUserManController : UserManController {
 		else return getUserByName(email_or_name);
 	}
 
-	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) @safe del)
 	{
 		listDirectory(m_basePath ~ "user/", (de) {
 			if (!de.name.endsWith(".json") || de.isDirectory) return true;
@@ -239,7 +240,8 @@ class FileUserManController : UserManController {
 		return readJsonFile!Group(groupFile(id));
 	}
 
-	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	alias enumerateGroups = UserManController.enumerateGroups;
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) @safe del)
 	{
 		listDirectory(m_basePath ~ "group/", (de) {
 			if (!de.name.endsWith(".json") || de.isDirectory) return true;
@@ -283,7 +285,8 @@ class FileUserManController : UserManController {
 		return ret;
 	}
 
-	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
+	alias enumerateGroupMembers = UserManController.enumerateGroupMembers;
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) @safe del)
 	{
 		import std.algorithm : canFind;
 		long cnt = 0;

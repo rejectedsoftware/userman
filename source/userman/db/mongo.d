@@ -87,7 +87,8 @@ class MongoUserManController : UserManController {
 		return usr;
 	}
 
-	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) del)
+	alias enumerateUsers = UserManController.enumerateUsers;
+	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) @safe del)
 	{
 		import std.conv : to;
 		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user.to!int, max_count.to!int)) {
@@ -175,7 +176,8 @@ class MongoUserManController : UserManController {
 		return grp;
 	}
 
-	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) del)
+	alias enumerateGroups = UserManController.enumerateGroups;
+	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) @safe del)
 	{
 		import std.conv : to;
 		foreach (grp; m_groups.find!Group(["query": null, "orderby": ["id": 1]], null, QueryFlags.None, first_group.to!int, max_count.to!int)) {
@@ -199,7 +201,8 @@ class MongoUserManController : UserManController {
 		assert(false);
 	}
 
-	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) del)
+	alias enumerateGroupMembers = UserManController.enumerateGroupMembers;
+	override void enumerateGroupMembers(string group, long first_member, long max_count, scope void delegate(User.ID usr) @safe del)
 	{
 		assert(false);
 	}
