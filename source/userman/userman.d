@@ -17,7 +17,7 @@ struct UserNameSettings {
 	int minLength = 3;
 	int maxLength = 32;
 	string additionalChars = "-_";
-	bool noNumberStart = false; // it's always a good idea to *not* able this option
+	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
 }
 
 /**
@@ -26,11 +26,14 @@ struct UserNameSettings {
 struct UserManCommonSettings {
 	UserNameSettings userNameSettings;
 	bool useUserNames = true; // use a user name or the email address for identification?
-	bool requireAccountValidation;
-	deprecated("Consistency: Use .requireAccountValidation instead.") alias requireActivation = requireAccountValidation;
+	bool requireActivation;
 	string serviceName = "User database test";
 	URL serviceURL = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
+
+	// The following line of code is responsible for the ocean of deprecation warnings.
+	// Removing it won't cause any harm to userman, but other software might depend on it.
+	deprecated("Consistency: Use .requireActivation instead.") alias requireAccountValidation = requireActivation;
 }
 
 class UserManSettings {
@@ -53,5 +56,4 @@ class UserManSettings {
 			this.common.serviceURL = value;
 		}
 	}
-	
 }

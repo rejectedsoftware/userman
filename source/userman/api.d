@@ -241,7 +241,7 @@ private class UserManAPIImpl : UserManAPI {
 		m_groups = new UserManGroupAPIImpl(ctrl);
 		m_settings.userNameSettings = ctrl.settings.userNameSettings;
 		m_settings.useUserNames = ctrl.settings.useUserNames;
-		m_settings.requireAccountValidation = ctrl.settings.requireAccountValidation;
+		m_settings.requireActivation = ctrl.settings.requireActivation;
 		m_settings.serviceName = ctrl.settings.serviceName;
 		m_settings.serviceURL = ctrl.settings.serviceURL;
 		m_settings.serviceEmail = ctrl.settings.serviceEmail;
