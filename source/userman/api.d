@@ -50,11 +50,8 @@ interface UserManAPI {
 }
 
 struct APISettings {
-	bool useUserNames;
-	bool requireActivation;
-	string serviceName;
-	URL serviceURL;
-	string serviceEmail;
+	UserManCommonSettings common;
+	alias common this;
 }
 
 /// Interface suitable for manipulating user information
@@ -242,10 +239,11 @@ private class UserManAPIImpl : UserManAPI {
 		m_ctrl = ctrl;
 		m_users = new UserManUserAPIImpl(ctrl);
 		m_groups = new UserManGroupAPIImpl(ctrl);
+		m_settings.userNameSettings = ctrl.settings.userNameSettings;
 		m_settings.useUserNames = ctrl.settings.useUserNames;
-		m_settings.requireActivation = ctrl.settings.requireAccountValidation;
+		m_settings.requireAccountValidation = ctrl.settings.requireAccountValidation;
 		m_settings.serviceName = ctrl.settings.serviceName;
-		m_settings.serviceURL = ctrl.settings.serviceUrl;
+		m_settings.serviceURL = ctrl.settings.serviceURL;
 		m_settings.serviceEmail = ctrl.settings.serviceEmail;
 	}
 

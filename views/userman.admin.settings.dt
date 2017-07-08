@@ -21,7 +21,27 @@ block userman.content
 			tr
 				th
 					input#useUserNames(type="checkbox", name="settings.useUserNames", checked=info.settings.useUserNames)
-					label(for="useUserNames")& Use user names
+					label(for="useUserNames")& Use usernames
+				td &nbsp;
+			tr
+				th
+					label(for="minLength")& A username's minimum length
+				td
+					input#minLength(type="number", name="settings.userNameSettings.minLength", value=info.settings.userNameSettings.minLength)
+			tr
+				th
+					label(for="maxLength")& A username's maximum length
+				td
+					input#maxLength(type="number", name="settings.userNameSettings.maxLength", value=info.settings.userNameSettings.maxLength)
+			tr
+				th
+					label(for="additionalChars")& Additional chars allowed in usernames
+				td
+					input#additionalChars(type="text", name="settings.userNameSettings.additionalChars", value=info.settings.userNameSettings.additionalChars)
+			tr
+				th
+					input#noNumberStart(type="checkbox", name="settings.userNameSettings.noNumberStart", checked=info.settings.userNameSettings.noNumberStart)
+					label(for="noNumberStart")& Usernames mustn't start with a number [Dangerous]
 				td &nbsp;
 			tr
 				th

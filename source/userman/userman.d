@@ -10,17 +10,48 @@ module userman.userman;
 public import vibe.mail.smtp;
 public import vibe.inet.url;
 
-class UserManSettings {
-	bool requireAccountValidation = true;
+/**
+	See_Also: vibe.utils.validation.validateUserName()
+ */
+struct UserNameSettings {
+	int minLength = 3;
+	int maxLength = 32;
+	string additionalChars = "-_";
+	bool noNumberStart = false; // it's always a good idea to *not* able this option
+}
+
+/**
+	Settings also used by the API
+ */
+struct UserManCommonSettings {
+	UserNameSettings userNameSettings;
 	bool useUserNames = true; // use a user name or the email address for identification?
-	string databaseURL = "mongodb://127.0.0.1:27017/test";//*/"redis://127.0.0.1:6379/1";
+	bool requireAccountValidation;
+	deprecated("Consistency: Use .requireAccountValidation instead.") alias requireActivation = requireAccountValidation;
 	string serviceName = "User database test";
-	URL serviceUrl = "http://www.example.com/";
+	URL serviceURL = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
+}
+
+class UserManSettings {
+	UserManCommonSettings common;
+	alias common this;
+
+	string databaseURL = "mongodb://127.0.0.1:27017/test";//*/"redis://127.0.0.1:6379/1";
 	SMTPClientSettings mailSettings;
 
 	this()
 	{
 		mailSettings = new SMTPClientSettings;
 	}
+
+	deprecated("Consistency: Use .serviceURL instead.") @property {
+		URL serviceUrl() {
+			return this.common.serviceURL;
+		}
+		void serviceUrl(URL value) {
+			this.common.serviceURL = value;
+		}
+	}
+	
 }

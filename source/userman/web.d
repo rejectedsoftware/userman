@@ -321,11 +321,19 @@ class UserManWebInterface {
 	}
 	
 	@noAuth @errorDisplay!getRegister
-	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
+	void postRegister(ValidEmail email, string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
 		if (m_settings.useUserNames) {
-			enforce(!name.isNull(), "Missing user name field.");
+			enforce(name != null, "Missing user name field.");
+
+			auto err = appender!string();
+			enforce(validateUserName(err, name,
+                m_settings.userNameSettings.minLength,
+                m_settings.userNameSettings.maxLength,
+                m_settings.userNameSettings.additionalChars,
+                m_settings.userNameSettings.noNumberStart), err.data);
+
 			username = name;
 		} else username = email;
 
