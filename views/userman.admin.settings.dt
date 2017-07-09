@@ -41,7 +41,7 @@ block userman.content
 			tr
 				th
 					input#noNumberStart(type="checkbox", name="settings.userNameSettings.noNumberStart", checked=info.settings.userNameSettings.noNumberStart)
-					label(for="noNumberStart")& Usernames mustn't start with a number [Dangerous]
+					label(for="noNumberStart")& Usernames mustn't start with a number [Not recommended!]
 				td &nbsp;
 			tr
 				th

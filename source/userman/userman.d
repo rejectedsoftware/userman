@@ -7,6 +7,7 @@
 */
 module userman.userman;
 
+import std.range : isOutputRange;
 public import vibe.mail.smtp;
 public import vibe.inet.url;
 
@@ -18,6 +19,16 @@ struct UserNameSettings {
 	int maxLength = 32;
 	string additionalChars = "-_";
 	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
+
+	public bool validateUserName(R)(ref R error_sink, string userName)
+		if (isOutputRange!(R, char))
+	{
+		return vibe.utils.validation.validateUserName(error_sink, userName,
+                this.minLength,
+                this.maxLength,
+                this.additionalChars,
+                this.noNumberStart);
+	}
 }
 
 /**

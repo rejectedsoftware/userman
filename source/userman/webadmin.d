@@ -80,8 +80,11 @@ class UserManWebAdminInterface {
 	}
 
 	@noAuth @errorDisplay!getLogin
-	void postInitialRegister(ValidUsername username, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation, string redirect = "/")
+	void postInitialRegister(string username, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation, string redirect = "/")
 	{
+		auto err = appender!string();
+		enforceHTTP(m_api.settings.userNameSettings.validateUserName(err, username), HTTPStatus.badRequest, err.data);
+
 		enforceHTTP(m_api.users.count == 0, HTTPStatus.forbidden, "Cannot create initial admin account when other accounts already exist.");
 		try m_api.groups[adminGroupName].get();
 		catch (Exception) m_api.groups.create(adminGroupName, "UserMan Administrators");
@@ -129,8 +132,11 @@ class UserManWebAdminInterface {
 	}
 
 	@errorDisplay!getUsers
-	void postUsers(AuthInfo auth, ValidUsername name, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation)
+	void postUsers(AuthInfo auth, string name, ValidEmail email, string full_name, ValidPassword password, Confirm!"password" password_confirmation)
 	{
+		auto err = appender!string();
+		enforceHTTP(m_api.settings.userNameSettings.validateUserName(err, name), HTTPStatus.badRequest, err.data);
+
 		m_api.users.register(email, name, full_name, password);
 		redirect("users");
 	}
@@ -162,8 +168,11 @@ class UserManWebAdminInterface {
 	}
 
 	@path("/users/:user/") @errorDisplay!getUser
-	void postUser(AuthInfo auth, User.ID _user, ValidUsername username, ValidEmail email, string full_name, bool active, bool banned)
+	void postUser(AuthInfo auth, User.ID _user, string username, ValidEmail email, string full_name, bool active, bool banned)
 	{
+		auto err = appender!string();
+		enforceHTTP(m_api.settings.userNameSettings.validateUserName(err, username), HTTPStatus.badRequest, err.data);
+
 		//m_api.users[_user].setName(username); // TODO!
 		m_api.users[_user].setEmail(email);
 		m_api.users[_user].setFullName(full_name);

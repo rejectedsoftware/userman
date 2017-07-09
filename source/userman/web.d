@@ -328,11 +328,7 @@ class UserManWebInterface {
 			enforce(name != null, "Missing user name field.");
 
 			auto err = appender!string();
-			enforce(validateUserName(err, name,
-                m_settings.userNameSettings.minLength,
-                m_settings.userNameSettings.maxLength,
-                m_settings.userNameSettings.additionalChars,
-                m_settings.userNameSettings.noNumberStart), err.data);
+			enforce(m_settings.userNameSettings.validateUserName(err, name), err.data);
 
 			username = name;
 		} else username = email;
