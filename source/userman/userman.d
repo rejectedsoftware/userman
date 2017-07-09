@@ -7,14 +7,17 @@
 */
 module userman.userman;
 
-import std.range : isOutputRange;
 public import vibe.mail.smtp;
 public import vibe.inet.url;
+
+static import vibe.utils.validation;
+
+import std.range : isOutputRange;
 
 /**
 	See_Also: vibe.utils.validation.validateUserName()
  */
-struct UserNameSettings {
+class UserNameSettings {
 	int minLength = 3;
 	int maxLength = 32;
 	string additionalChars = "-_";
@@ -34,7 +37,7 @@ struct UserNameSettings {
 /**
 	Settings also used by the API
  */
-struct UserManCommonSettings {
+class UserManCommonSettings {
 	UserNameSettings userNameSettings;
 	bool useUserNames = true; // use a user name or the email address for identification?
 	bool requireActivation;
@@ -42,29 +45,18 @@ struct UserManCommonSettings {
 	URL serviceURL = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
 
-	// The following line of code is responsible for the ocean of deprecation warnings.
-	// Removing it won't cause any harm to userman, but other software might depend on it.
+	// The following lines of code are responsible for the ocean of deprecation warnings.
+	// Removing them won't cause any harm to userman, but other software might depend on them.
 	deprecated("Consistency: Use .requireActivation instead.") alias requireAccountValidation = requireActivation;
+	deprecated("Consistency: Use .serviceURL instead.") alias serviceUrl = serviceURL;
 }
 
-class UserManSettings {
-	UserManCommonSettings common;
-	alias common this;
-
+class UserManSettings : UserManCommonSettings {
 	string databaseURL = "mongodb://127.0.0.1:27017/test";//*/"redis://127.0.0.1:6379/1";
 	SMTPClientSettings mailSettings;
 
 	this()
 	{
 		mailSettings = new SMTPClientSettings;
-	}
-
-	deprecated("Consistency: Use .serviceURL instead.") @property {
-		URL serviceUrl() {
-			return this.common.serviceURL;
-		}
-		void serviceUrl(URL value) {
-			this.common.serviceURL = value;
-		}
 	}
 }

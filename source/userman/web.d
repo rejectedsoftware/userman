@@ -18,6 +18,7 @@ import vibe.utils.validation;
 import vibe.web.auth;
 import vibe.web.web;
 
+import std.array : appender;
 import std.exception;
 import std.typecons : Nullable;
 
@@ -259,7 +260,7 @@ class UserManWebInterface {
 		SessionVar!(string, "userName") m_sessUserName;
 		SessionVar!(string, "userFullName") m_sessUserFullName;
 		SessionVar!(string, "userID") m_sessUserID;
-		APISettings m_settings;
+		UserManAPISettings m_settings;
 	}
 	
 	this(UserManAPI api, string prefix = "/")

@@ -46,12 +46,11 @@ interface UserManAPI {
 	/// Interface suitable for manipulating group information
 	@property Collection!UserManGroupAPI groups();
 
-	@property APISettings settings();
+	@property UserManAPISettings settings();
 }
 
-struct APISettings {
-	UserManCommonSettings common;
-	alias common this;
+class UserManAPISettings : UserManCommonSettings {
+
 }
 
 /// Interface suitable for manipulating user information
@@ -231,7 +230,7 @@ private class UserManAPIImpl : UserManAPI {
 		UserManController m_ctrl;
 		UserManUserAPIImpl m_users;
 		UserManGroupAPIImpl m_groups;
-		APISettings m_settings;
+		UserManAPISettings m_settings;
 	}
 
 	this(UserManController ctrl)
@@ -249,7 +248,7 @@ private class UserManAPIImpl : UserManAPI {
 
 	@property Collection!UserManUserAPI users() { return Collection!UserManUserAPI(m_users); }
 	@property Collection!UserManGroupAPI groups() { return Collection!UserManGroupAPI(m_groups); }
-	@property APISettings settings() { return m_settings; }
+	@property UserManAPISettings settings() { return m_settings; }
 }
 
 private class UserManUserAPIImpl : UserManUserAPI {

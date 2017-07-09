@@ -18,6 +18,7 @@ import vibe.web.auth;
 import vibe.web.web;
 
 import std.algorithm : min, max;
+import std.array : appender;
 import std.conv : to;
 import std.exception;
 import std.typecons : Nullable;
@@ -319,7 +320,7 @@ class UserManWebAdminInterface {
 	{
 		struct Info {
 			string error;
-			APISettings settings;
+			UserManAPISettings settings;
 		}
 
 		Info info;
