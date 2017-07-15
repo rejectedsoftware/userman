@@ -329,6 +329,7 @@ class UserManWebInterface {
 		} catch(Exception e) {
 			// ignore errors, so that registered e-mails cannot be determined
 			logDiagnostic("Failed to send password reset mail to %s: %s", email, e.msg);
+			logDebug("Full error: %s", e.toString().sanitize);
 		}
 
 		render!("userman.forgot_login_sent.dt");
