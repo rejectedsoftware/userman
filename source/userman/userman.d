@@ -23,7 +23,7 @@ class UserNameSettings {
 	string additionalChars = "-_";
 	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
 
-	public bool validateUserName(R)(ref R error_sink, string userName)
+	package bool validateUserName(R)(ref R error_sink, string userName)
 		if (isOutputRange!(R, char))
 	{
 		return vibe.utils.validation.validateUserName(error_sink, userName,

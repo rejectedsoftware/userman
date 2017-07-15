@@ -322,7 +322,7 @@ class UserManWebInterface {
 	}
 	
 	@noAuth @errorDisplay!getRegister
-	void postRegister(ValidEmail email, string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
+	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
 		if (m_settings.useUserNames) {
