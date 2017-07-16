@@ -18,6 +18,7 @@ import vibe.utils.validation;
 import vibe.web.auth;
 import vibe.web.web;
 
+import std.array : appender;
 import std.exception;
 import std.typecons : Nullable;
 
@@ -259,7 +260,7 @@ class UserManWebInterface {
 		SessionVar!(string, "userName") m_sessUserName;
 		SessionVar!(string, "userFullName") m_sessUserFullName;
 		SessionVar!(string, "userID") m_sessUserID;
-		APISettings m_settings;
+		UserManAPISettings m_settings;
 	}
 	
 	this(UserManAPI api, string prefix = "/")
@@ -321,11 +322,15 @@ class UserManWebInterface {
 	}
 	
 	@noAuth @errorDisplay!getRegister
-	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
+	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
 		if (m_settings.useUserNames) {
-			enforce(!name.isNull(), "Missing user name field.");
+			enforce(!name.isNull, "Missing user name field.");
+
+			auto err = appender!string();
+			enforce(m_settings.userNameSettings.validateUserName(err, name), err.data);
+
 			username = name;
 		} else username = email;
 

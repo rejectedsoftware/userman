@@ -10,13 +10,49 @@ module userman.userman;
 public import vibe.mail.smtp;
 public import vibe.inet.url;
 
-class UserManSettings {
-	bool requireAccountValidation = true;
+static import vibe.utils.validation;
+
+import std.range : isOutputRange;
+
+/**
+	See_Also: vibe.utils.validation.validateUserName()
+ */
+class UserNameSettings {
+	int minLength = 3;
+	int maxLength = 32;
+	string additionalChars = "-_";
+	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
+
+	package bool validateUserName(R)(ref R error_sink, string userName)
+		if (isOutputRange!(R, char))
+	{
+		return vibe.utils.validation.validateUserName(error_sink, userName,
+                this.minLength,
+                this.maxLength,
+                this.additionalChars,
+                this.noNumberStart);
+	}
+}
+
+/**
+	Settings also used by the API
+ */
+class UserManCommonSettings {
+	UserNameSettings userNameSettings;
 	bool useUserNames = true; // use a user name or the email address for identification?
-	string databaseURL = "mongodb://127.0.0.1:27017/test";//*/"redis://127.0.0.1:6379/1";
+	bool requireActivation;
 	string serviceName = "User database test";
-	URL serviceUrl = "http://www.example.com/";
+	URL serviceURL = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
+
+	// The following lines of code are responsible for the ocean of deprecation warnings.
+	// Removing them won't cause any harm to userman, but other software might depend on them.
+	deprecated("Consistency: Use .requireActivation instead.") alias requireAccountValidation = requireActivation;
+	deprecated("Consistency: Use .serviceURL instead.") alias serviceUrl = serviceURL;
+}
+
+class UserManSettings : UserManCommonSettings {
+	string databaseURL = "mongodb://127.0.0.1:27017/test";//*/"redis://127.0.0.1:6379/1";
 	SMTPClientSettings mailSettings;
 
 	this()

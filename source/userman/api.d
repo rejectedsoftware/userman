@@ -46,15 +46,11 @@ interface UserManAPI {
 	/// Interface suitable for manipulating group information
 	@property Collection!UserManGroupAPI groups();
 
-	@property APISettings settings();
+	@property UserManAPISettings settings();
 }
 
-struct APISettings {
-	bool useUserNames;
-	bool requireActivation;
-	string serviceName;
-	URL serviceURL;
-	string serviceEmail;
+class UserManAPISettings : UserManCommonSettings {
+
 }
 
 /// Interface suitable for manipulating user information
@@ -234,7 +230,7 @@ private class UserManAPIImpl : UserManAPI {
 		UserManController m_ctrl;
 		UserManUserAPIImpl m_users;
 		UserManGroupAPIImpl m_groups;
-		APISettings m_settings;
+		UserManAPISettings m_settings;
 	}
 
 	this(UserManController ctrl)
@@ -242,16 +238,17 @@ private class UserManAPIImpl : UserManAPI {
 		m_ctrl = ctrl;
 		m_users = new UserManUserAPIImpl(ctrl);
 		m_groups = new UserManGroupAPIImpl(ctrl);
+		m_settings.userNameSettings = ctrl.settings.userNameSettings;
 		m_settings.useUserNames = ctrl.settings.useUserNames;
-		m_settings.requireActivation = ctrl.settings.requireAccountValidation;
+		m_settings.requireActivation = ctrl.settings.requireActivation;
 		m_settings.serviceName = ctrl.settings.serviceName;
-		m_settings.serviceURL = ctrl.settings.serviceUrl;
+		m_settings.serviceURL = ctrl.settings.serviceURL;
 		m_settings.serviceEmail = ctrl.settings.serviceEmail;
 	}
 
 	@property Collection!UserManUserAPI users() { return Collection!UserManUserAPI(m_users); }
 	@property Collection!UserManGroupAPI groups() { return Collection!UserManGroupAPI(m_groups); }
-	@property APISettings settings() { return m_settings; }
+	@property UserManAPISettings settings() { return m_settings; }
 }
 
 private class UserManUserAPIImpl : UserManUserAPI {
