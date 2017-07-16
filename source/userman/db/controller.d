@@ -70,7 +70,7 @@ class UserManController {
 		validateEmail(email);
 		validatePassword(password, password);
 
-		auto need_activation = m_settings.requireAccountValidation;
+		auto need_activation = m_settings.requireActivation;
 		User user;
 		user.active = !need_activation;
 		user.name = name;
@@ -108,8 +108,8 @@ class UserManController {
 			if( m_settings.mailSettings ){
 				auto msg = new MemoryOutputStream;
 				auto serviceName = m_settings.serviceName;
-				auto serviceUrl = m_settings.serviceUrl;
-				compileDietFile!("userman.mail.invitation.dt", user, serviceName, serviceUrl)(msg);
+				auto serviceURL = m_settings.serviceURL;
+				compileDietFile!("userman.mail.invitation.dt", user, serviceName, serviceURL)(msg);
 
 				auto mail = new Mail;
 				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -146,8 +146,8 @@ class UserManController {
 		
 		auto msg = new MemoryOutputStream;
 		auto serviceName = m_settings.serviceName;
-		auto serviceUrl = m_settings.serviceUrl;
-		compileDietFile!("userman.mail.activation.dt", user, serviceName, serviceUrl)(msg);
+		auto serviceURL = m_settings.serviceURL;
+		compileDietFile!("userman.mail.activation.dt", user, serviceName, serviceURL)(msg);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";

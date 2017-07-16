@@ -13,7 +13,7 @@ import userman.db.controller;
 shared static this()
 {
 	auto usettings = new UserManSettings;
-	usettings.requireAccountValidation = false;
+	usettings.requireActivation = false;
 	usettings.databaseURL = "file://./testdb/";
 
 	auto uctrl = createUserManController(usettings);

@@ -17,6 +17,7 @@ import vibe.utils.validation;
 import vibe.web.web;
 
 import std.encoding : sanitize;
+import std.array : appender;
 import std.exception;
 import std.typecons : Nullable;
 
@@ -268,11 +269,15 @@ class UserManWebInterface {
 	}
 	
 	@errorDisplay!getRegister
-	void postRegister(ValidEmail email, Nullable!ValidUsername name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
+	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
 		string username;
 		if (m_controller.settings.useUserNames) {
-			enforce(!name.isNull(), "Missing user name field.");
+			enforce(!name.isNull, "Missing user name field.");
+
+			auto err = appender!string();
+			enforce(m_controller.settings.userNameSettings.validateUserName(err, name), err.data);
+
 			username = name;
 		} else username = email;
 
