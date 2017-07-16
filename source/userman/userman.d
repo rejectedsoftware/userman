@@ -22,16 +22,22 @@ class UserNameSettings {
 	int maxLength = 32;
 	string additionalChars = "-_";
 	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
+}
 
-	package bool validateUserName(R)(ref R error_sink, string userName)
-		if (isOutputRange!(R, char))
-	{
-		return vibe.utils.validation.validateUserName(error_sink, userName,
-                this.minLength,
-                this.maxLength,
-                this.additionalChars,
-                this.noNumberStart);
+package bool validateUserName(R)(UserNameSettings settings, ref R error_sink, string userName)
+	if (isOutputRange!(R, char))
+{
+	if (!settings) {
+		static UserNameSettings default_settings;
+		if (!default_settings) default_settings = new UserNameSettings;
+		settings = default_settings;
 	}
+
+	return vibe.utils.validation.validateUserName(error_sink, userName,
+            settings.minLength,
+            settings.maxLength,
+            settings.additionalChars,
+            settings.noNumberStart);
 }
 
 /**
