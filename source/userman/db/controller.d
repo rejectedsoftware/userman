@@ -16,7 +16,7 @@ import vibe.db.mongo.mongo;
 import vibe.http.router;
 import vibe.mail.smtp;
 import vibe.stream.memory;
-import vibe.templ.diet;
+import diet.html;
 import vibe.utils.validation;
 
 import std.algorithm;
@@ -106,10 +106,10 @@ class UserManController {
 			addUser(user);
 
 			if( m_settings.mailSettings ){
-				auto msg = new MemoryOutputStream;
+				auto msg = appender!string();
 				auto serviceName = m_settings.serviceName;
 				auto serviceURL = m_settings.serviceURL;
-				compileDietFile!("userman.mail.invitation.dt", user, serviceName, serviceURL)(msg);
+				compileHTMLDietFile!("userman.mail.invitation.dt", user, serviceName, serviceURL)(msg);
 
 				auto mail = new Mail;
 				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -144,10 +144,10 @@ class UserManController {
 		auto user = getUserByEmail(email);
 		enforce(!user.active, "The user account is already active.");
 		
-		auto msg = new MemoryOutputStream;
+		auto msg = appender!string();
 		auto serviceName = m_settings.serviceName;
 		auto serviceURL = m_settings.serviceURL;
-		compileDietFile!("userman.mail.activation.dt", user, serviceName, serviceURL)(msg);
+		compileHTMLDietFile!("userman.mail.activation.dt", user, serviceName, serviceURL)(msg);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -170,10 +170,10 @@ class UserManController {
 		updateUser(usr);
 
 		if( m_settings.mailSettings ){
-			auto msg = new MemoryOutputStream;
+			auto msg = appender!string();
 			auto user = &usr;
 			auto settings = m_settings;
-			compileDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
+			compileHTMLDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
 
 			auto mail = new Mail;
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";

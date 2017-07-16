@@ -2,15 +2,15 @@
 	"fileVersion": 1,
 	"versions": {
 		"backtrace-d": "~master",
-		"diet-ng": "1.1.1",
-		"eventcore": "0.8.3",
-		"libasync": "0.7.9",
+		"diet-ng": "1.2.1",
+		"eventcore": "0.8.12",
+		"libasync": "0.8.3",
 		"libev": "5.0.0+4.04",
 		"libevent": "2.0.2+2.0.16",
-		"memutils": "0.4.8",
+		"memutils": "0.4.9",
 		"openssl": "1.1.5+1.0.1g",
-		"taggedalgebraic": "0.10.5+commit.1.ge4c5ec7",
-		"vibe-core": "1.0.0-alpha.14+commit.1.gdae1ca7",
-		"vibe-d": "0.7.30"
+		"taggedalgebraic": "0.10.7",
+		"vibe-core": "1.0.0",
+		"vibe-d": "0.8.0"
 	}
 }
