@@ -326,7 +326,7 @@ class UserManWebInterface {
 	{
 		string username;
 		if (m_settings.useUserNames) {
-			enforce(name != null, "Missing user name field.");
+			enforce(!name.isNull, "Missing user name field.");
 
 			auto err = appender!string();
 			enforce(m_settings.userNameSettings.validateUserName(err, name), err.data);
