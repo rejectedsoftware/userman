@@ -1,13 +1,14 @@
 /**
 	Web admin interface implementation
 
-	Copyright: © 2015 RejectedSoftware e.K.
+	Copyright: © 2015-2017 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
 module userman.webadmin;
 
 public import userman.api;
+import userman.userman : validateUserName;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
@@ -99,7 +100,7 @@ class UserManWebAdminInterface {
 	@noAuth void getLogout()
 	{
 		terminateSession();
-		redirect("/");	
+		redirect("/");
 	}
 
 

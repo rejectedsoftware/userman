@@ -1,7 +1,7 @@
 /**
 	Web interface implementation
 
-	Copyright: © 2012-2015 RejectedSoftware e.K.
+	Copyright: © 2012-2017 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -9,6 +9,7 @@ module userman.web;
 
 public import userman.api;
 import userman.db.controller : UserManController;
+import userman.userman : validateUserName;
 
 import vibe.core.log;
 import vibe.crypto.passwordhash;
@@ -112,7 +113,7 @@ class UserManWebAuthenticator {
 			if (res.headerWritten) return;
 			callback(req, res, usr);
 		}
-		
+
 		return &requestHandler;
 	}
 	HTTPServerRequestDelegate auth(HTTPServerRequestDelegate callback)
@@ -129,7 +130,7 @@ class UserManWebAuthenticator {
 			return m_api.users.getByName(req.session.get!string("userName"));
 		}
 	}
-	
+
 	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
@@ -138,7 +139,7 @@ class UserManWebAuthenticator {
 			auto usr = m_api.users.getByName(req.session.get!string("userName"));
 			callback(req, res, usr);
 		}
-		
+
 		return &requestHandler;
 	}
 }
@@ -262,7 +263,7 @@ class UserManWebInterface {
 		SessionVar!(string, "userID") m_sessUserID;
 		UserManAPISettings m_settings;
 	}
-	
+
 	this(UserManAPI api, string prefix = "/")
 	{
 		m_api = api;
@@ -274,7 +275,7 @@ class UserManWebInterface {
 	{
 		this(createLocalUserManAPI(controller), prefix);
 	}
-	
+
 	@noAuth
 	void getLogin(string redirect = "", string _error = "")
 	{
@@ -283,7 +284,7 @@ class UserManWebInterface {
 		render!("userman.login.dt", error, redirect, settings);
 	}
 
-	@noAuth @errorDisplay!getLogin	
+	@noAuth @errorDisplay!getLogin
 	void postLogin(string name, string password, string redirect = "")
 	{
 		User user;
@@ -297,14 +298,14 @@ class UserManWebInterface {
 		}
 
 		enforce(user.active, "The account is not yet activated.");
-		
+
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
 		m_sessUserID = user.id.toString();
 		.redirect(redirect.length ? redirect : m_prefix);
 	}
-	
+
 	@noAuth
 	void getLogout(HTTPServerResponse res)
 	{
@@ -320,7 +321,7 @@ class UserManWebInterface {
 		auto settings = m_settings;
 		render!("userman.register.dt", error, settings);
 	}
-	
+
 	@noAuth @errorDisplay!getRegister
 	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
@@ -343,7 +344,7 @@ class UserManWebInterface {
 			postLogin(username, password);
 		}
 	}
-	
+
 	@noAuth
 	void getResendActivation(string _error = "")
 	{
@@ -375,7 +376,7 @@ class UserManWebInterface {
 		m_sessUserID = user.id.toString();
 		render!("userman.activate.dt");
 	}
-	
+
 	@noAuth
 	void getForgotLogin(string _error = "")
 	{
@@ -421,7 +422,7 @@ class UserManWebInterface {
 		string error = _error;
 		render!("userman.profile.dt", user, useUserNames, error);
 	}
-	
+
 	@anyAuth @errorDisplay!getProfile
 	void postProfile(HTTPServerRequest req, User _user)
 	{
