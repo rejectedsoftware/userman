@@ -2,3 +2,7 @@
 /testdb
 /*.dll
 /*.exe
+userman
+userman.exe
+libuserman.a
+userman.lib
