@@ -44,7 +44,7 @@ void registerUserManWebInterface(URLRouter router, UserManController controller)
 void updateProfile(UserManController controller, User user, HTTPServerRequest req)
 {
 	if (controller.settings.useUserNames) {
-		if (auto pv = "name" in req.form) user.fullName = *pv;
+		if (auto pv = "name" in req.form) user.name = *pv;
 		if (auto pv = "email" in req.form) user.email = *pv;
 	} else {
 		if (auto pv = "email" in req.form) user.email = user.name = *pv;
@@ -92,7 +92,7 @@ class UserManWebAuthenticator {
 			if (res.headerWritten) return;
 			callback(req, res, usr);
 		}
-		
+
 		return &requestHandler;
 	}
 	HTTPServerRequestDelegate auth(HTTPServerRequestDelegate callback)
@@ -109,7 +109,7 @@ class UserManWebAuthenticator {
 			return m_controller.getUserByName(req.session.get!string("userName"));
 		}
 	}
-	
+
 	HTTPServerRequestDelegate ifAuth(void delegate(HTTPServerRequest, HTTPServerResponse, User) callback)
 	{
 		void requestHandler(HTTPServerRequest req, HTTPServerResponse res)
@@ -118,7 +118,7 @@ class UserManWebAuthenticator {
 			auto usr = m_controller.getUserByName(req.session.get!string("userName"));
 			callback(req, res, usr);
 		}
-		
+
 		return &requestHandler;
 	}
 }
@@ -218,14 +218,14 @@ class UserManWebInterface {
 		SessionVar!(string, "userFullName") m_sessUserFullName;
 		SessionVar!(string, "userID") m_sessUserID;
 	}
-	
+
 	this(UserManController controller, string prefix = "/")
 	{
 		m_controller = controller;
 		m_auth = new UserManWebAuthenticator(controller);
 		m_prefix = prefix;
 	}
-	
+
 	void getLogin(string redirect = "", string _error = "")
 	{
 		string error = _error;
@@ -233,7 +233,7 @@ class UserManWebInterface {
 		render!("userman.login.dt", error, redirect, settings);
 	}
 
-	@errorDisplay!getLogin	
+	@errorDisplay!getLogin
 	void postLogin(string name, string password, string redirect = "")
 	{
 		User user;
@@ -246,14 +246,14 @@ class UserManWebInterface {
 		}
 
 		enforce(user.active, "The account is not yet activated.");
-		
+
 		m_sessUserEmail = user.email;
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
 		m_sessUserID = user.id;
 		.redirect(redirect.length ? redirect : m_prefix);
 	}
-	
+
 	void getLogout(HTTPServerResponse res)
 	{
 		terminateSession();
@@ -267,7 +267,7 @@ class UserManWebInterface {
 		auto settings = m_controller.settings;
 		render!("userman.register.dt", error, settings);
 	}
-	
+
 	@errorDisplay!getRegister
 	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
 	{
@@ -290,7 +290,7 @@ class UserManWebInterface {
 			postLogin(username, password);
 		}
 	}
-	
+
 	void getResendActivation(string _error = "")
 	{
 		string error = _error;
@@ -319,7 +319,7 @@ class UserManWebInterface {
 		m_sessUserID = user.id;
 		render!("userman.activate.dt");
 	}
-	
+
 	void getForgotLogin(string _error = "")
 	{
 		auto error = _error;
@@ -364,7 +364,7 @@ class UserManWebInterface {
 		string error = _error;
 		render!("userman.profile.dt", user, useUserNames, error);
 	}
-	
+
 	@auth @errorDisplay!getProfile
 	void postProfile(HTTPServerRequest req, User _user)
 	{
