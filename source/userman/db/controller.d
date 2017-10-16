@@ -16,8 +16,8 @@ import vibe.db.mongo.mongo;
 import vibe.http.router;
 import vibe.mail.smtp;
 import vibe.stream.memory;
-import vibe.templ.diet;
 import vibe.utils.validation;
+import diet.html;
 
 import std.algorithm;
 import std.array;
@@ -33,7 +33,7 @@ UserManController createUserManController(UserManSettings settings)
 	import userman.db.file;
 	import userman.db.mongo;
 	import userman.db.redis;
-	
+
 	auto url = settings.databaseURL;
 	if (url.startsWith("redis://")) return new RedisUserManController(settings);
 	else if (url.startsWith("mongodb://")) return new MongoUserManController(settings);
@@ -45,9 +45,9 @@ class UserManController {
 	protected {
 		UserManSettings m_settings;
 	}
-	
+
 	this(UserManSettings settings)
-	{	
+	{
 		m_settings = settings;
 	}
 
@@ -60,7 +60,7 @@ class UserManController {
 		enforce(usr.name.length >= 3, "User names must be at least 3 characters long.");
 		validateEmail(usr.email);
 	}
-	
+
 	abstract User.ID addUser(ref User usr);
 
 	User.ID registerUser(string email, string name, string full_name, string password)
@@ -83,7 +83,7 @@ class UserManController {
 			user.activationCode = generateActivationCode();
 
 		addUser(user);
-		
+
 		if( need_activation )
 			resendActivation(email);
 
@@ -107,10 +107,10 @@ class UserManController {
 			addUser(user);
 
 			if( m_settings.mailSettings ){
-				auto msg = new MemoryOutputStream;
+				auto msg = appender!string;
 				auto serviceName = m_settings.serviceName;
 				auto serviceURL = m_settings.serviceURL;
-				compileDietFile!("userman.mail.invitation.dt", user, serviceName, serviceURL)(msg);
+				msg.compileHTMLDietFile!("userman.mail.invitation.dt", user, serviceName, serviceURL);
 
 				auto mail = new Mail;
 				mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -118,7 +118,7 @@ class UserManController {
 				mail.headers["Subject"] = "Invitation";
 				mail.headers["Content-Type"] = "text/html; charset=UTF-8";
 				mail.bodyText = cast(string)msg.data();
-				
+
 				sendMail(m_settings.mailSettings, mail);
 			}
 
@@ -145,18 +145,18 @@ class UserManController {
 		user.activationCode = "";
 		updateUser(user);
 	}
-	
+
 	void resendActivation(string email)
 	{
 		email = email.toLower();
 
 		auto user = getUserByEmail(email);
 		enforce(!user.active, "The user account is already active.");
-		
-		auto msg = new MemoryOutputStream;
+
+		auto msg = appender!string();
 		auto serviceName = m_settings.serviceName;
 		auto serviceURL = m_settings.serviceURL;
-		compileDietFile!("userman.mail.activation.dt", user, serviceName, serviceURL)(msg);
+		msg.compileHTMLDietFile!("userman.mail.activation.dt", user, serviceName, serviceURL);
 
 		auto mail = new Mail;
 		mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
@@ -164,7 +164,7 @@ class UserManController {
 		mail.headers["Subject"] = "Account activation";
 		mail.headers["Content-Type"] = "text/html; charset=UTF-8";
 		mail.bodyText = cast(string)msg.data();
-		
+
 		sendMail(m_settings.mailSettings, mail);
 	}
 
@@ -179,10 +179,10 @@ class UserManController {
 		updateUser(usr);
 
 		if( m_settings.mailSettings ){
-			auto msg = new MemoryOutputStream;
+			auto msg = appender!string();
 			auto user = &usr;
 			auto settings = m_settings;
-			compileDietFile!("userman.mail.reset_password.dt", user, reset_code, settings)(msg);
+			msg.compileHTMLDietFile!("userman.mail.reset_password.dt", user, reset_code, settings);
 
 			auto mail = new Mail;
 			mail.headers["From"] = m_settings.serviceName ~ " <" ~ m_settings.serviceEmail ~ ">";
