@@ -438,6 +438,6 @@ class UserManWebInterface {
 
 private struct TranslationContext {
 	import std.meta : AliasSeq;
-	alias languages = AliasSeq!();
+	alias languages = AliasSeq!("en_US", "de_DE");
 	//mixin translationModule!"userman";
 }
