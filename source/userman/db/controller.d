@@ -42,6 +42,7 @@ UserManController createUserManController(UserManSettings settings)
 }
 
 class UserManController {
+@safe:
 	protected {
 		UserManSettings m_settings;
 	}
@@ -77,7 +78,7 @@ class UserManController {
 		user.name = name;
 		user.fullName = full_name;
 		user.auth.method = "password";
-		user.auth.passwordHash = generateSimplePasswordHash(password);
+		user.auth.passwordHash = () @trusted { return generateSimplePasswordHash(password); } ();
 		user.email = email;
 		if( need_activation )
 			user.activationCode = generateActivationCode();
@@ -129,7 +130,7 @@ class UserManController {
 	Nullable!(User.ID) testLogin(string name, string password)
 	{
 		auto user = getUserByEmailOrName(name);
-		if (testSimplePasswordHash(user.auth.passwordHash, password))
+		if (() @trusted { return testSimplePasswordHash(user.auth.passwordHash, password); } ())
 			return Nullable!(User.ID)(user.id);
 		return Nullable!(User.ID).init;
 	}
@@ -180,7 +181,7 @@ class UserManController {
 
 		if( m_settings.mailSettings ){
 			auto msg = appender!string();
-			auto user = &usr;
+			scope user = () @trusted { return &usr; } ();
 			auto settings = m_settings;
 			msg.compileHTMLDietFile!("userman.mail.reset_password.dt", user, reset_code, settings);
 
@@ -204,7 +205,7 @@ class UserManController {
 		usr.resetCode = "";
 		updateUser(usr);
 		enforce(reset_code == code, "Invalid request code, please request a new one.");
-		usr.auth.passwordHash = generateSimplePasswordHash(new_password);
+		usr.auth.passwordHash = () @trusted { return generateSimplePasswordHash(new_password); } ();
 		updateUser(usr);
 	}
 
@@ -307,7 +308,7 @@ struct Group {
 
 
 string generateActivationCode()
-{
+@safe {
 	auto ret = appender!string();
 	foreach( i; 0 .. 10 ){
 		auto n = cast(char)uniform(0, 62);
