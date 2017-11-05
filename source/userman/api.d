@@ -238,6 +238,7 @@ private class UserManAPIImpl : UserManAPI {
 		m_ctrl = ctrl;
 		m_users = new UserManUserAPIImpl(ctrl);
 		m_groups = new UserManGroupAPIImpl(ctrl);
+		m_settings = new UserManAPISettings;
 		m_settings.userNameSettings = ctrl.settings.userNameSettings;
 		m_settings.useUserNames = ctrl.settings.useUserNames;
 		m_settings.requireActivation = ctrl.settings.requireActivation;
@@ -354,7 +355,7 @@ private class UserManUserAPIImpl : UserManUserAPI {
 	{
 		m_ctrl.setFullName(id, full_name);
 	}
-	
+
 	void setPassword(User.ID id, string password)
 	{
 		m_ctrl.setPassword(id, password);
@@ -381,7 +382,7 @@ private class UserManUserAPIImpl : UserManUserAPI {
 			import vibe.core.log; logInfo("DO IT");
 		}
 	}
-	
+
 	void setProperty(User.ID id, string name, Json value)
 	{
 		m_ctrl.setProperty(id, name, value);
