@@ -57,7 +57,7 @@ block userman.content
 				th
 					label(for="serviceURL")& Service URL
 				td
-					input#serviceURL(type="text", name="settnigs.serviceURL", value=info.settings.serviceURL)
+					input#serviceURL(type="text", name="settings.serviceURL", value=info.settings.serviceURL)
 			tr
 				th
 					label(for="serviceEmail")& Service email
