@@ -44,7 +44,7 @@ block userman.content
 					.td
 						input(type="text", name="value", value=info.group.properties[n])
 					.td
-						button(type="sumbit") Set
+						button(type="submit") Set
 			form.tr(method="POST", action="set_property")
 				.td
 					input(type="text", name="name")
