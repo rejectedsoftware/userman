@@ -1,7 +1,40 @@
 language: d
 sudo: false
+
+os:
+  - linux
+  - osx
+
+osx_image: xcode9.1
+
+d:
+  - dmd-2.076.1
+  - dmd-2.075.1
+  - dmd-2.074.1
+  - dmd-2.073.2
+  - dmd-2.072.2
+  - dmd-2.071.2
+  - dmd-2.070.2
+  - dmd-2.069.2
+  - ldc-1.4.0
+  - ldc-1.3.0
+  - ldc-1.2.0
+  - ldc-1.1.1
+  - gdc
+  - dmd-beta
+  - ldc-beta
+  - dmd
+  - ldc
+
+matrix:
+  allow_failures:
+    - d: gdc
+    - d: dmd-beta
+    - d: ldc-beta
+
 addons:
   apt:
     packages:
       - libevent-dev
       - libssl-dev
+
