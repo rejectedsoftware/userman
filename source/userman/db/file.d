@@ -23,17 +23,17 @@ import std.uuid;
 
 class FileUserManController : UserManController {
 	private {
-		Path m_basePath;
+		NativePath m_basePath;
 	}
-	
+
 	this(UserManSettings settings)
-	{	
+	{
 		super(settings);
 
 		enforce(settings.databaseURL.startsWith("file://"),
 			"Database URL must have a file:// schema.");
 
-		m_basePath = URL(settings.databaseURL).path;
+		m_basePath = cast(NativePath)URL(settings.databaseURL).path;
 		string[] paths = [".", "user", "user/byName", "user/byEmail", "group", "group/byName"];
 		foreach (p; paths)
 			if (!existsFile(m_basePath ~ p))
@@ -49,7 +49,7 @@ class FileUserManController : UserManController {
 	private final Path userByEmailFile(string email) { return m_basePath ~ "user/byEmail/" ~ (urlEncode(email) ~ ".json"); }
 	private final Path userFile(User.ID id) { return m_basePath ~ "user/" ~ (id.toString() ~ ".json"); }
 	private final Path groupFile(string id) in { assert(isValidGroupID(id)); } body { return m_basePath ~ ("group/" ~ id ~ ".json"); }
-	
+
 	override User.ID addUser(ref User usr)
 	{
 		validateUser(usr);
@@ -162,7 +162,7 @@ class FileUserManController : UserManController {
 
 		writeJsonFile(userFile(user.id), user);
 	}
-	
+
 	override void setEmail(User.ID user, string email)
 	{
 		auto usr = getUser(user);
@@ -176,7 +176,7 @@ class FileUserManController : UserManController {
 		usr.fullName = full_name;
 		updateUser(usr);
 	}
-	
+
 	override void setPassword(User.ID user, string password)
 	{
 		import vibe.crypto.passwordhash;
@@ -186,7 +186,7 @@ class FileUserManController : UserManController {
 		usr.auth.passwordHash = generateSimplePasswordHash(password);
 		updateUser(usr);
 	}
-	
+
 	override void setProperty(User.ID user, string name, Json value)
 	{
 		auto usr = getUser(user);
@@ -200,7 +200,7 @@ class FileUserManController : UserManController {
 		usr.properties.remove(name);
 		updateUser(usr);
 	}
-	
+
 	override void addGroup(string id, string description)
 	{
 		enforce(isValidGroupID(id), "Invalid group ID.");
