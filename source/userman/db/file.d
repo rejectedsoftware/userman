@@ -45,10 +45,10 @@ class FileUserManController : UserManController {
 		return existsFile(userByEmailFile(email));
 	}
 
-	private final Path userByNameFile(string name) { return m_basePath ~ "user/byName/" ~ (urlEncode(name) ~ ".json"); }
-	private final Path userByEmailFile(string email) { return m_basePath ~ "user/byEmail/" ~ (urlEncode(email) ~ ".json"); }
-	private final Path userFile(User.ID id) { return m_basePath ~ "user/" ~ (id.toString() ~ ".json"); }
-	private final Path groupFile(string id) in { assert(isValidGroupID(id)); } body { return m_basePath ~ ("group/" ~ id ~ ".json"); }
+	private final NativePath userByNameFile(string name) { return m_basePath ~ "user/byName/" ~ (urlEncode(name) ~ ".json"); }
+	private final NativePath userByEmailFile(string email) { return m_basePath ~ "user/byEmail/" ~ (urlEncode(email) ~ ".json"); }
+	private final NativePath userFile(User.ID id) { return m_basePath ~ "user/" ~ (id.toString() ~ ".json"); }
+	private final NativePath groupFile(string id) in { assert(isValidGroupID(id)); } body { return m_basePath ~ ("group/" ~ id ~ ".json"); }
 
 	override User.ID addUser(ref User usr)
 	{
@@ -299,12 +299,12 @@ class FileUserManController : UserManController {
 	}
 }
 
-private void writeJsonFile(T)(Path filename, T value)
+private void writeJsonFile(T)(NativePath filename, T value)
 {
 	writeFileUTF8(filename, value.serializeToPrettyJson());
 }
 
-private T readJsonFile(T)(Path filename)
+private T readJsonFile(T)(NativePath filename)
 {
 	import vibe.http.common : HTTPStatusException;
 	import vibe.http.status : HTTPStatus;
