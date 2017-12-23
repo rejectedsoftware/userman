@@ -4,7 +4,7 @@ html
 		block title
 		title= title
 
-		:css
+		style.
 			body { font-family: 'Segoe UI', 'Droid Sans', 'Open Sans', sans-serif; font-size: 9.75pt; line-height: 15pt; }
 			h1, h2 { font-family: 'Segoe UI Light', 'Segoe UI', 'Droid Sans Light', 'Droid Sans', 'Open Sans Light', 'Open Sans', sans-serif; }
 			h1 { font-size: 32pt; }
