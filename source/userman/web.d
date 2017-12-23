@@ -187,7 +187,7 @@ unittest {
 		url_prefix = Optional prefix to prepend to the login page path
 */
 User authenticate(HTTPServerRequest req, HTTPServerResponse res, UserManAPI api, string url_prefix = "")
-{
+@trusted {
 	if (!req.session) {
 		res.redirect(url_prefix~"login?redirect="~urlEncode(req.path));
 		return User.init;

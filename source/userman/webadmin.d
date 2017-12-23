@@ -365,7 +365,7 @@ class UserManWebAdminInterface {
 	}
 
 	@noRoute AuthInfo authenticate(HTTPServerRequest req, HTTPServerResponse res)
-	{
+	@trusted {
 		if (m_authUser == User.ID.init) {
 			redirect("/login?redirect="~req.path.urlEncode);
 			return AuthInfo.init;
