@@ -20,6 +20,7 @@ import std.datetime;
 import std.exception;
 import std.string;
 import std.conv;
+import std.range : front;
 
 
 class RedisUserManController : UserManController {
@@ -40,9 +41,9 @@ class RedisUserManController : UserManController {
 		//RedisHash!(long) m_userGroups;
 		RedisHash!long m_groupsByName;
 	}
-	
+
 	this(UserManSettings settings)
-	{	
+	{
 		super(settings);
 
 		string schema = "redis";
@@ -55,7 +56,7 @@ class RedisUserManController : UserManController {
 		// Parse string by replacing schema with 'http' as URL won't parse redis
 		// URLs correctly.
 		string url_string = settings.databaseURL;
-		if (idx > 0) 
+		if (idx > 0)
 			url_string = url_string[idx+3..$];
 
 		URL url = URL("http://" ~ url_string);
@@ -63,7 +64,7 @@ class RedisUserManController : UserManController {
 
 		long dbIndex = 0;
 		if (!url.path.empty)
-			dbIndex = to!long(url.path[0].toString());
+			dbIndex = to!long(url.path.bySegment.front.name);
 
 		m_redisClient = connectRedis(url.host, url.port == ushort.init ? 6379 : url.port);
 		m_redisDB = m_redisClient.getDatabase(dbIndex);
@@ -87,7 +88,7 @@ class RedisUserManController : UserManController {
 		}
 		return false;
 	}
-	
+
 	override User.ID addUser(ref User usr)
 	{
 		validateUser(usr);
@@ -254,7 +255,7 @@ class RedisUserManController : UserManController {
 				m_redisDB.srem("userman:group:" ~ gid.to!string ~ ":members", user.id);
 		}
 	}
-	
+
 	override void setEmail(User.ID user, string email)
 	{
 		validateEmail(email);
@@ -274,7 +275,7 @@ class RedisUserManController : UserManController {
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 		m_users[user.longValue].fullName = full_name;
 	}
-	
+
 	override void setPassword(User.ID user, string password)
 	{
 		import vibe.crypto.passwordhash;
@@ -286,14 +287,14 @@ class RedisUserManController : UserManController {
 		auth.passwordHash = generateSimplePasswordHash(password);
 		m_userAuthInfo[user.longValue] = auth;
 	}
-	
+
 	override void setProperty(User.ID user, string name, string value)
 	{
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 
 		m_userProperties[user.longValue][name] = Bson(value).toString();
 	}
-	
+
 	override void addGroup(string name, string description)
 	{
 		// TODO: avoid iterating over all groups!
@@ -304,8 +305,8 @@ class RedisUserManController : UserManController {
 		// Add Group
 		long groupId = m_groups.createID();
 		Group grp = {
-			id: Group.ID(groupId), 
-			name: name, 
+			id: Group.ID(groupId),
+			name: name,
 			description: description
 		};
 

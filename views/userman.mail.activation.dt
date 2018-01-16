@@ -5,7 +5,7 @@ block title
 
 block body
 	- import vibe.textfilter.urlencode;
-	- import vibe.inet.path : Path;
+	- import vibe.inet.path : InetPath;
 
 	h1 Account activation
 	
@@ -15,6 +15,6 @@ block body
 	p Otherwise, please open the link below in your browser to confirm the activation:
 	p
 		- auto link = serviceURL;
-		- link.path = Path("/activate");
+		- link.path = InetPath("/activate");
 		- link.queryString = "email="~urlEncode(user.email)~"&code="~urlEncode(user.activationCode);
 		a(href="#{link}")= link
