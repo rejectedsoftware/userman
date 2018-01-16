@@ -1,2 +1,9 @@
 language: d
 sudo: false
+addons:
+  apt:
+    packages:
+      - pkg-config
+      - zlib1g-dev
+      - libevent-dev
+      - libssl-dev
