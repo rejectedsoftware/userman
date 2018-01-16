@@ -5,12 +5,12 @@ block title
 
 block body
 	- import vibe.textfilter.urlencode;
-	- import vibe.inet.path : Path;
+	- import vibe.inet.path : InetPath;
 
 	h1 Invitation to #{serviceName}
 	
 	p Dear #{user.fullName},
 	- auto link = serviceURL;
-	- link.path = Path("/register");
+	- link.path = InetPath("/register");
 	- link.queryString = "email="~urlEncode(user.email);
 	p You have been invited to #{serviceName}. To accept the invitation, please go to <a href="#{link}">#{link}</a> and register an account.
