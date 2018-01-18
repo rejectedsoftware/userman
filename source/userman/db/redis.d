@@ -24,6 +24,8 @@ import std.range : front;
 
 
 class RedisUserManController : UserManController {
+@trusted: // The whole Redis API is not yet @safe
+
 	private {
 		RedisClient m_redisClient;
 		RedisDatabase m_redisDB;

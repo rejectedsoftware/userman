@@ -43,6 +43,7 @@ RestInterfaceClient!UserManAPI createUserManRestAPI(URL base_url)
 
 /// Root entry point for the UserMan API
 interface UserManAPI {
+@safe:
 	/// Interface suitable for manipulating user information
 	@property Collection!UserManUserAPI users();
 
@@ -58,6 +59,7 @@ class UserManAPISettings : UserManCommonSettings {
 
 /// Interface suitable for manipulating user information
 interface UserManUserAPI {
+@safe:
 	struct CollectionIndices {
 		User.ID _user;
 	}
@@ -134,6 +136,7 @@ interface UserManUserAPI {
 }
 
 interface UserManUserPropertyAPI {
+@safe:
 	struct CollectionIndices {
 		User.ID _user;
 		string _name;
@@ -155,7 +158,7 @@ struct User {
 	string email;
 
 	this(userman.db.controller.User usr)
-	{
+	@safe {
 		assert(&this !is null);
 
 		this.id = usr.id;
@@ -169,6 +172,7 @@ struct User {
 
 /// Interface suitable for manipulating group information
 interface UserManGroupAPI {
+@safe:
 	struct CollectionIndices {
 		string _group;
 	}
@@ -198,6 +202,7 @@ interface UserManGroupAPI {
 }
 
 interface UserManGroupMemberAPI {
+@safe:
 	struct CollectionIndices {
 		string _group;
 		User.ID _user;
@@ -222,7 +227,7 @@ struct Group {
 	//Json[string] properties;
 
 	this(userman.db.controller.Group grp)
-	{
+	@safe {
 		this.id = grp.id;
 		this.description = grp.description;
 	}
