@@ -11,7 +11,6 @@ public import userman.api;
 import userman.userman : validateUserName;
 
 import vibe.core.log;
-import vibe.crypto.passwordhash;
 import vibe.http.router;
 import vibe.textfilter.urlencode;
 import vibe.utils.validation;

@@ -151,9 +151,8 @@ class MongoUserManController : UserManController {
 
 	override void setPassword(User.ID user, string password)
 	{
-		import vibe.crypto.passwordhash;
 		m_users.update(["_id": user.bsonObjectIDValue], ["$set":
-			["auth.method": "password", "auth.passwordHash": () @trusted { return generateSimplePasswordHash(password); } ()]]);
+			["auth.method": "password", "auth.passwordHash": generatePasswordHash(password)]]);
 	}
 
 	override void setProperty(User.ID user, string name, Json value)

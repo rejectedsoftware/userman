@@ -179,11 +179,9 @@ class FileUserManController : UserManController {
 
 	override void setPassword(User.ID user, string password)
 	{
-		import vibe.crypto.passwordhash;
-
 		auto usr = getUser(user);
 		usr.auth.method = "password";
-		usr.auth.passwordHash = () @trusted { return generateSimplePasswordHash(password); } ();
+		usr.auth.passwordHash = generatePasswordHash(password);
 		updateUser(usr);
 	}
 

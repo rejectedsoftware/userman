@@ -283,13 +283,11 @@ class RedisUserManController : UserManController {
 
 	override void setPassword(User.ID user, string password)
 	{
-		import vibe.crypto.passwordhash;
-
 		enforce(m_users.isMember(user.longValue), "Invalid user ID.");
 
 		AuthInfo auth = m_userAuthInfo[user.longValue];
 		auth.method = "password";
-		auth.passwordHash = generateSimplePasswordHash(password);
+		auth.passwordHash = generatePasswordHash(password);
 		m_userAuthInfo[user.longValue] = auth;
 	}
 

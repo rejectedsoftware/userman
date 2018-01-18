@@ -10,7 +10,6 @@ module userman.db.controller;
 public import userman.userman;
 import userman.id;
 
-import vibe.crypto.passwordhash;
 import vibe.data.serialization;
 import vibe.db.mongo.mongo;
 import vibe.http.router;
@@ -78,7 +77,7 @@ class UserManController {
 		user.name = name;
 		user.fullName = full_name;
 		user.auth.method = "password";
-		user.auth.passwordHash = () @trusted { return generateSimplePasswordHash(password); } ();
+		user.auth.passwordHash = generatePasswordHash(password);
 		user.email = email;
 		if( need_activation )
 			user.activationCode = generateActivationCode();
@@ -130,7 +129,7 @@ class UserManController {
 	Nullable!(User.ID) testLogin(string name, string password)
 	{
 		auto user = getUserByEmailOrName(name);
-		if (() @trusted { return testSimplePasswordHash(user.auth.passwordHash, password); } ())
+		if (validatePasswordHash(user.auth.passwordHash, password))
 			return Nullable!(User.ID)(user.id);
 		return Nullable!(User.ID).init;
 	}
@@ -205,7 +204,7 @@ class UserManController {
 		usr.resetCode = "";
 		updateUser(usr);
 		enforce(reset_code == code, "Invalid request code, please request a new one.");
-		usr.auth.passwordHash = () @trusted { return generateSimplePasswordHash(new_password); } ();
+		usr.auth.passwordHash = generatePasswordHash(new_password);
 		updateUser(usr);
 	}
 
@@ -317,4 +316,18 @@ string generateActivationCode()
 		else ret.put(cast(char)('0'+n-52));
 	}
 	return ret.data();
+}
+
+string generatePasswordHash(string password)
+@safe {
+	// TODO: use a more secure hash method
+	import vibe.crypto.passwordhash : generateSimplePasswordHash;
+	return () @trusted { return generateSimplePasswordHash(password); } ();
+}
+
+bool validatePasswordHash(string password_hash, string password)
+@safe {
+	// TODO: use a more secure hash method
+	import vibe.crypto.passwordhash : testSimplePasswordHash;
+	return () @trusted { return testSimplePasswordHash(password_hash, password); } ();
 }
