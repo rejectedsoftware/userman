@@ -1,16 +1,19 @@
 /**
 	Local and REST API access.
 
-	Copyright: © 2015-2016 RejectedSoftware e.K.
+	Copyright: © 2015-2018 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
 module userman.api;
 
-import userman.db.controller;
+import userman.db.controller : UserManController, UserManCommonSettings;
 
 import vibe.data.json : Json;
-import vibe.http.router;
+import vibe.http.router : URLRouter;
+import vibe.http.common : enforceHTTP;
+import vibe.http.status : HTTPStatus;
+import vibe.inet.url : URL;
 import vibe.web.rest;
 
 /**
@@ -150,11 +153,11 @@ struct User {
 	string name;
 	string fullName;
 	string email;
-	//string[] groups;
-	//Json[string] properties;
 
 	this(userman.db.controller.User usr)
 	{
+		assert(&this !is null);
+
 		this.id = usr.id;
 		this.active = usr.active;
 		this.banned = usr.banned;
@@ -313,7 +316,11 @@ private class UserManUserAPIImpl : UserManUserAPI {
 
 	User get(User.ID id)
 	{
-		return User(m_ctrl.getUser(id));
+		// COMPILERBUG: For an unconceivable reason, the this pointer of the
+		// constructed struct is null inside the constructor if it is returned
+		// directly, here. Creating a variable first works around this.
+		auto ret = User(m_ctrl.getUser(id));
+		return ret;
 	}
 
 	User getByName(string q)

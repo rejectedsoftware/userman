@@ -1,7 +1,7 @@
 /**
 	File system based database controller.
 
-	Copyright: 2015 RejectedSoftware e.K.
+	Copyright: 2015-2018 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -237,7 +237,12 @@ class FileUserManController : UserManController {
 
 	override Group getGroup(string id)
 	{
-		return readJsonFile!Group(groupFile(id));
+		auto json = readFileUTF8(groupFile(id)).parseJsonString();
+		// migration from 0.3.x to 0.4.x
+		if (auto pn = "name" in json)
+			if ("id" !in json)
+				json["id"] = *pn;
+		return deserializeJson!Group(json);
 	}
 
 	alias enumerateGroups = UserManController.enumerateGroups;

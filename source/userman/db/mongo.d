@@ -1,7 +1,7 @@
 /**
 	Database abstraction layer
 
-	Copyright: © 2012-2014 RejectedSoftware e.K.
+	Copyright: © 2012-2018 RejectedSoftware e.K.
 	License: Subject to the terms of the General Public License version 3, as written in the included LICENSE.txt file.
 	Authors: Sönke Ludwig
 */
@@ -9,6 +9,7 @@ module userman.db.mongo;
 
 import userman.db.controller;
 
+import vibe.core.log : logDiagnostic;
 import vibe.db.mongo.mongo;
 
 import std.exception : enforce;
@@ -21,9 +22,9 @@ class MongoUserManController : UserManController {
 		MongoCollection m_users;
 		MongoCollection m_groups;
 	}
-	
+
 	this(UserManSettings settings)
-	{	
+	{
 		super(settings);
 
 		string database = "admin";
@@ -35,6 +36,28 @@ class MongoUserManController : UserManController {
 		m_users = db["userman.users"];
 		m_groups = db["userman.groups"];
 
+		// migrate old _id+name format to id (0.3.x -> 0.4.x)
+		foreach (usr; m_users.find(["groups": ["$type": cast(int)Bson.Type.objectID]])) {
+			logDiagnostic("Migrating user %s from 0.3.x to 0.4.x.", usr["_id"]);
+			string[] grps;
+			foreach (gid; usr["groups"]) {
+				auto g = m_groups.findOne(["_id": gid], ["name": true, "id": true]);
+				if (!g.isNull) {
+					auto gname = g.tryIndex("name");
+					if (gname.isNull) gname = g["id"];
+					grps ~= gname.get.get!string;
+				}
+			}
+			m_users.update(["_id": usr["_id"]], ["$set": ["groups": grps]]);
+		}
+		foreach (grp; m_groups.find(["name": ["$exists": true]])) {
+			logDiagnostic("Migrating group %s from 0.3.x to 0.4.x.", grp["name"].get!string);
+			auto n = grp["name"];
+			grp.remove("name");
+			grp["id"] = n;
+			m_groups.update(["_id": grp["_id"]], grp);
+		}
+
 		m_users.ensureIndex([tuple("name", 1)], IndexFlags.Unique);
 		m_users.ensureIndex([tuple("email", 1)], IndexFlags.Unique);
 	}
@@ -44,13 +67,13 @@ class MongoUserManController : UserManController {
 		auto bu = m_users.findOne(["email": email], ["auth": true]);
 		return !bu.isNull() && bu["auth"]["method"].get!string.length > 0;
 	}
-	
+
 	override User.ID addUser(ref User usr)
 	{
 		validateUser(usr);
 		enforce(m_users.findOne(["name": usr.name]).isNull(), "The user name is already taken.");
 		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
-		
+
 		usr.id = User.ID(BsonObjectID.generate());
 		m_users.insert(usr);
 
@@ -59,7 +82,7 @@ class MongoUserManController : UserManController {
 
 	override User getUser(User.ID id)
 	{
-		auto usr = m_users.findOne!User(["_id": id.bsonObjectIDValue	]);
+		auto usr = m_users.findOne!User(["_id": id.bsonObjectIDValue]);
 		enforce(!usr.isNull(), "The specified user id is invalid.");
 		return usr;
 	}
@@ -137,7 +160,7 @@ class MongoUserManController : UserManController {
 	{
 		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}
-	
+
 	override void removeProperty(User.ID user, string name)
 	{
 		m_users.update(["_id": user.bsonObjectIDValue], ["$unset": ["properties."~name: ""]]);
