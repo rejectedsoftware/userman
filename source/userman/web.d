@@ -207,6 +207,7 @@ unittest {
 
 	@requiresAuth
 	class MyWebService {
+		@safe:
 		private {
 			UserManAPI m_api;
 		}
@@ -431,7 +432,7 @@ class UserManWebInterface {
 	}
 
 	@noRoute User authenticate(HTTPServerRequest req, HTTPServerResponse res)
-	{
+	@safe {
 		return .authenticate(req, res, m_api, m_prefix);
 	}
 }
