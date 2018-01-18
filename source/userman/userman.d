@@ -21,7 +21,7 @@ class UserNameSettings {
 	int minLength = 3;
 	int maxLength = 32;
 	string additionalChars = "-_";
-	bool noNumberStart = false; // it's always a good idea to keep this option *disabled* 
+	bool noNumberStart = false; // it's always a good idea to keep this option *disabled*
 }
 
 package bool validateUserName(R)(UserNameSettings settings, ref R error_sink, string userName)
@@ -50,11 +50,18 @@ class UserManCommonSettings {
 	string serviceName = "User database test";
 	URL serviceURL = "http://www.example.com/";
 	string serviceEmail = "userdb@example.com";
+}
 
-	// The following lines of code are responsible for the ocean of deprecation warnings.
-	// Removing them won't cause any harm to userman, but other software might depend on them.
-	deprecated("Consistency: Use .requireActivation instead.") alias requireAccountValidation = requireActivation;
-	deprecated("Consistency: Use .serviceURL instead.") alias serviceUrl = serviceURL;
+deprecated("Consistency: Use .requireActivation instead.")
+@property ref inout(bool) requireAccountValidation(inout UserManCommonSettings settings)
+{
+	return settings.requireActivation;
+}
+
+deprecated("Consistency: Use .serviceURL instead.")
+@property ref inout(URL) serviceUrl(inout UserManCommonSettings settings)
+{
+	return settings.serviceURL;
 }
 
 class UserManSettings : UserManCommonSettings {
