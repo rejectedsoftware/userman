@@ -4,5 +4,6 @@
 /*.exe
 userman
 userman.exe
+userman-test-*
 libuserman.a
 userman.lib
