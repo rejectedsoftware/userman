@@ -1,10 +1,10 @@
 name "userman"
 description "Provides user and group storage, authentication and administration."
 authors "Sönke Ludwig"
-copyright "Copyright (c) 2012-2016 rejectedsoftware e.K."
+copyright "Copyright (c) 2012-2020 rejectedsoftware e.K."
 license "GPL-3.0"
 
-dependency "vibe-d" version=">=0.8.2 <0.9.0-0"
+dependency "vibe-d" version=">=0.8.2 <0.10.0-0"
 
 configuration "application" {
 	targetType "executable"
