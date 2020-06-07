@@ -3,9 +3,6 @@ sudo: false
 
 os:
   - linux
-  - osx
-
-osx_image: xcode9.2
 
 d:
   - dmd-2.092.0,dub
