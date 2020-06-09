@@ -194,8 +194,8 @@ class UserManWebAdminInterface {
 	{
 		import vibe.data.json : parseJson;
 
-		if (!old_name.isNull() && old_name != name)
-			m_api.users[_user].properties[old_name].remove();
+		if (!old_name.isNull() && old_name.get != name)
+			m_api.users[_user].properties[old_name.get].remove();
 		if (name.length) m_api.users[_user].properties[name].set(parseJson(value));
 		redirect("./");
 	}

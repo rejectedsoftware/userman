@@ -330,9 +330,9 @@ class UserManWebInterface {
 			enforce(!name.isNull, "Missing user name field.");
 
 			auto err = appender!string();
-			enforce(m_settings.userNameSettings.validateUserName(err, name), err.data);
+			enforce(m_settings.userNameSettings.validateUserName(err, name.get), err.data);
 
-			username = name;
+			username = name.get;
 		} else username = email;
 
 		m_api.users.register(email, username, fullName, password);

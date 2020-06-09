@@ -78,6 +78,7 @@ class UserManController {
 		user.fullName = full_name;
 		user.auth.method = "password";
 		user.auth.passwordHash = generatePasswordHash(password);
+		assert(validatePasswordHash(user.auth.passwordHash, password));
 		user.email = email;
 		if( need_activation )
 			user.activationCode = generateActivationCode();
@@ -128,10 +129,13 @@ class UserManController {
 
 	Nullable!(User.ID) testLogin(string name, string password)
 	{
+		string password_ = password;
 		auto user = getUserByEmailOrName(name);
-		if (validatePasswordHash(user.auth.passwordHash, password))
-			return Nullable!(User.ID)(user.id);
-		return Nullable!(User.ID).init;
+		assert(password == password_); // this used to be false to to a Nullable related codegen issue
+		Nullable!(User.ID) ret;
+		if (validatePasswordHash(user.auth.passwordHash, password_))
+			ret = user.id;
+		return ret;
 	}
 
 	void activateUser(string email, string activation_code)
@@ -341,6 +345,12 @@ bool validatePasswordHash(string password_hash, string password)
 	auto hashcmp = upass[4 .. 20];
 	ubyte[16] hash = md5hash(salt, password);
 	return hash == hashcmp;
+}
+
+unittest {
+	auto h = generatePasswordHash("foobar");
+	assert(!validatePasswordHash(h, "foo"));
+	assert(validatePasswordHash(h, "foobar"));
 }
 
 private ubyte[16] md5hash(ubyte[] salt, string[] strs...)
