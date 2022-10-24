@@ -8,7 +8,7 @@ block body
 	- import vibe.inet.path : InetPath;
 
 	h1 Invitation to #{serviceName}
-	
+
 	p Dear #{user.fullName},
 	- auto link = serviceURL;
 	- link.path = InetPath("/register");
