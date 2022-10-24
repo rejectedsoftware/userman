@@ -8,6 +8,7 @@
 module userman.api;
 
 import userman.db.controller : UserManController, UserManCommonSettings;
+static import userman.db.controller;
 
 import vibe.data.json : Json;
 import vibe.http.router : URLRouter;

@@ -4,8 +4,8 @@ block title
 	- title = "Activation mail";
 
 block body
+	- import vibe.core.path : InetPath;
 	- import vibe.textfilter.urlencode;
-	- import vibe.inet.path : InetPath;
 
 	h1 Account activation
 

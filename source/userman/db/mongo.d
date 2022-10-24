@@ -58,8 +58,10 @@ class MongoUserManController : UserManController {
 			m_groups.update(["_id": grp["_id"]], grp);
 		}
 
-		m_users.ensureIndex([tuple("name", 1)], IndexFlags.Unique);
-		m_users.ensureIndex([tuple("email", 1)], IndexFlags.Unique);
+		IndexOptions opts;
+		opts.unique = true;
+		m_users.createIndex(IndexModel().add("name", 1).withOptions(opts));
+		m_users.createIndex(IndexModel().add("email", 1).withOptions(opts));
 	}
 
 	override bool isEmailRegistered(string email)
