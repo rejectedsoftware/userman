@@ -4,11 +4,11 @@ block title
 	- title = "Invitation mail";
 
 block body
+	- import vibe.core.path : InetPath;
 	- import vibe.textfilter.urlencode;
-	- import vibe.inet.path : InetPath;
 
 	h1 Invitation to #{serviceName}
-	
+
 	p Dear #{user.fullName},
 	- auto link = serviceURL;
 	- link.path = InetPath("/register");

@@ -4,11 +4,11 @@ block title
 	- title = "Activation mail";
 
 block body
+	- import vibe.core.path : InetPath;
 	- import vibe.textfilter.urlencode;
-	- import vibe.inet.path : InetPath;
 
 	h1 Account activation
-	
+
 	p Dear #{user.fullName},
 	p A request has been made to activate your #{serviceName} account.
 	p If you did not make this request, you can safely ignore this message.

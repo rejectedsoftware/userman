@@ -48,7 +48,7 @@ class FileUserManController : UserManController {
 	private final NativePath userByNameFile(string name) @safe { return m_basePath ~ "user/byName/" ~ (urlEncode(name) ~ ".json"); }
 	private final NativePath userByEmailFile(string email) @safe { return m_basePath ~ "user/byEmail/" ~ (urlEncode(email) ~ ".json"); }
 	private final NativePath userFile(User.ID id) @safe { return m_basePath ~ "user/" ~ (id.toString() ~ ".json"); }
-	private final NativePath groupFile(string id) @safe in { assert(isValidGroupID(id)); } body { return m_basePath ~ ("group/" ~ id ~ ".json"); }
+	private final NativePath groupFile(string id) @safe in { assert(isValidGroupID(id)); } do { return m_basePath ~ ("group/" ~ id ~ ".json"); }
 
 	override User.ID addUser(ref User usr)
 	{
