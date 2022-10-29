@@ -126,12 +126,6 @@ interface UserManUserAPI {
 	/// Sets the banned state of a user.
 	void setBanned(User.ID _user, bool banned);
 
-	/// Sets a custom user account property.
-	deprecated void setProperty(User.ID _user, string name, Json value);
-
-	/// Removes a user account property.
-	deprecated void removeProperty(User.ID _user, string name);
-
 	/// Returns the names of all groups the user is in.
 	string[] getGroups(User.ID _user);
 }
@@ -394,16 +388,6 @@ private class UserManUserAPIImpl : UserManUserAPI {
 			m_ctrl.updateUser(usr);
 			import vibe.core.log; logInfo("DO IT");
 		}
-	}
-
-	void setProperty(User.ID id, string name, Json value)
-	{
-		m_ctrl.setProperty(id, name, value);
-	}
-
-	void removeProperty(User.ID id, string name)
-	{
-		m_ctrl.removeProperty(id, name);
 	}
 
 	string[] getGroups(User.ID id)
