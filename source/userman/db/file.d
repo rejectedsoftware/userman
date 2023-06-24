@@ -131,7 +131,7 @@ class FileUserManController : UserManController {
 		removeFile(userFile(user_id));
 	}
 
-	override void updateUser(in ref User user)
+	override void updateUser(const ref User user)
 	{
 
 		enforce(existsFile(userFile(user.id)), "Invalid user ID.");

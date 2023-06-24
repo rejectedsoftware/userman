@@ -132,7 +132,7 @@ class MongoUserManController : UserManController {
 		m_users.remove(["_id": user_id.bsonObjectIDValue]);
 	}
 
-	override void updateUser(in ref User user)
+	override void updateUser(const ref User user)
 	{
 		validateUser(user);
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
