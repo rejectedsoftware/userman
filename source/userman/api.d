@@ -109,7 +109,7 @@ interface UserManUserAPI {
 
 	/// Deletes a user account.
 	void remove(User.ID _user);
-	//void update(in ref User user);
+	//void update(in User user);
 
 	/// Updates the e-mail address of a user account.
 	void setEmail(User.ID _user, string email);
@@ -351,7 +351,7 @@ private class UserManUserAPIImpl : UserManUserAPI {
 		m_ctrl.deleteUser(id);
 	}
 
-	//void update(in ref User user);
+	//void update(in User user);
 
 	void setEmail(User.ID id, string email)
 	{
