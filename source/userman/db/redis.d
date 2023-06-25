@@ -219,7 +219,7 @@ class RedisUserManController : UserManController {
 			removeGroupMember(gid, user_id);
 	}
 
-	override void updateUser(in ref User user)
+	override void updateUser(const ref User user)
 	{
 		enforce(m_users.isMember(user.id.longValue), "Invalid user ID.");
 		validateUser(user);

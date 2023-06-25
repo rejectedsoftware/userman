@@ -55,7 +55,7 @@ class UserManController {
 
 	abstract bool isEmailRegistered(string email);
 
-	void validateUser(in ref User usr)
+	void validateUser(const ref User usr)
 	{
 		enforce(usr.name.length >= 3, "User names must be at least 3 characters long.");
 		validateEmail(usr.email);
@@ -229,7 +229,7 @@ class UserManController {
 
 	abstract void deleteUser(User.ID user_id);
 
-	abstract void updateUser(in ref User user);
+	abstract void updateUser(const ref User user);
 	abstract void setEmail(User.ID user, string email);
 	abstract void setFullName(User.ID user, string full_name);
 	abstract void setPassword(User.ID user, string password);
