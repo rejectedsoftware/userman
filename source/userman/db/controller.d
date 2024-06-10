@@ -353,23 +353,13 @@ unittest {
 	assert(validatePasswordHash(h, "foobar"));
 }
 
-private ubyte[16] md5hash(ubyte[] salt, string[] strs...)
+private ubyte[16] md5hash(scope const(ubyte)[] salt, const string[] strs...)
 @safe {
-	static if( __traits(compiles, {import std.digest.md;}) ){
-		import std.digest.md;
-		MD5 ctx;
-		ctx.start();
-		ctx.put(salt);
-		foreach( s; strs ) ctx.put(cast(const(ubyte)[])s);
-		return ctx.finish();
-	} else {
-		import std.md5;
-		ubyte[16] hash;
-		MD5_CTX ctx;
-		ctx.start();
-		ctx.update(salt);
-		foreach( s; strs ) ctx.update(s);
-		ctx.finish(hash);
-		return hash;
-	}
+	import std.digest.md;
+
+	MD5 ctx;
+	ctx.start();
+	ctx.put(salt);
+	foreach (s; strs) ctx.put(cast(const(ubyte)[])s);
+	return ctx.finish();
 }
