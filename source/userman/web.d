@@ -123,7 +123,7 @@ class UserManWebAuthenticator {
 	User performAuth(HTTPServerRequest req, HTTPServerResponse res)
 	{
 		if (!req.session) {
-			res.redirect(m_prefix~"login?redirect="~urlEncode(req.path));
+			res.redirect(m_prefix ~ "login?redirect=" ~ req.requestPath.toString());
 			return User.init;
 		} else {
 			return m_api.users.getByName(req.session.get!string("userName"));
@@ -188,7 +188,7 @@ unittest {
 User authenticate(HTTPServerRequest req, HTTPServerResponse res, UserManAPI api, string url_prefix = "")
 @trusted {
 	if (!req.session) {
-		res.redirect(url_prefix~"login?redirect="~urlEncode(req.path));
+		res.redirect(url_prefix ~ "login?redirect=" ~ req.requestPath.toString());
 		return User.init;
 	} else {
 		return api.users.getByName(req.session.get!string("userName"));
