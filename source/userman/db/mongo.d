@@ -107,7 +107,8 @@ class MongoUserManController : UserManController {
 
 	override User getUserByEmailOrName(string email_or_name)
 	{
-		auto usr = m_users.findOne!User(["$or": [["email": email_or_name.toLower()], ["name": email_or_name]]]);
+		email_or_name = email_or_name.toLower();
+		auto usr = m_users.findOne!User(["$or": [["email": email_or_name], ["name": email_or_name]]]);
 		enforce(!usr.isNull(), "The specified email address or user name is not registered.");
 		return usr.get;
 	}
