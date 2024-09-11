@@ -48,14 +48,14 @@ class MongoUserManController : UserManController {
 					grps ~= gname.get.get!string;
 				}
 			}
-			m_users.update(["_id": usr["_id"]], ["$set": ["groups": grps]]);
+			m_users.updateOne(["_id": usr["_id"]], ["$set": ["groups": grps]]);
 		}
 		foreach (grp; m_groups.find(["name": ["$exists": true]])) {
 			logDiagnostic("Migrating group %s from 0.3.x to 0.4.x.", grp["name"].get!string);
 			auto n = grp["name"];
 			grp.remove("name");
 			grp["id"] = n;
-			m_groups.update(["_id": grp["_id"]], grp);
+			m_groups.replaceOne(["_id": grp["_id"]], grp);
 		}
 
 		IndexOptions opts;
@@ -77,7 +77,7 @@ class MongoUserManController : UserManController {
 		enforce(m_users.findOne(["email": usr.email]).isNull(), "The email address is already in use.");
 
 		usr.id = User.ID(BsonObjectID.generate());
-		m_users.insert(usr);
+		m_users.insertOne(usr);
 
 		return usr.id;
 	}
@@ -117,7 +117,11 @@ class MongoUserManController : UserManController {
 	override void enumerateUsers(long first_user, long max_count, scope void delegate(ref User usr) @safe del)
 	{
 		import std.conv : to;
-		foreach (usr; m_users.find!User(["query": null, "orderby": ["name": 1]], null, QueryFlags.None, first_user.to!int, max_count.to!int)) {
+		FindOptions opts;
+		opts.skip = first_user;
+		opts.limit = max_count;
+		opts.sort = Bson(["name": Bson(1)]);
+		foreach (usr; m_users.find!User(Bson.emptyObject, opts)) {
 			if (max_count-- <= 0) break;
 			del(usr);
 		}
@@ -125,12 +129,12 @@ class MongoUserManController : UserManController {
 
 	override long getUserCount()
 	{
-		return m_users.count(Bson.emptyObject);
+		return m_users.countDocuments(Bson.emptyObject);
 	}
 
 	override void deleteUser(User.ID user_id)
 	{
-		m_users.remove(["_id": user_id.bsonObjectIDValue]);
+		m_users.deleteOne(["_id": user_id.bsonObjectIDValue]);
 	}
 
 	override void updateUser(const ref User user)
@@ -139,33 +143,33 @@ class MongoUserManController : UserManController {
 		enforce(m_settings.useUserNames || user.name == user.email, "User name must equal email address if user names are not used.");
 		// FIXME: enforce that no user names or emails are used twice!
 
-		m_users.update(["_id": user.id.bsonObjectIDValue], user);
+		m_users.replaceOne(["_id": user.id.bsonObjectIDValue], user);
 	}
 
 	override void setEmail(User.ID user, string email)
 	{
-		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["email": email]]);
+		m_users.updateOne(["_id": user.bsonObjectIDValue], ["$set": ["email": email]]);
 	}
 
 	override void setFullName(User.ID user, string full_name)
 	{
-		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["fullName": full_name]]);
+		m_users.updateOne(["_id": user.bsonObjectIDValue], ["$set": ["fullName": full_name]]);
 	}
 
 	override void setPassword(User.ID user, string password)
 	{
-		m_users.update(["_id": user.bsonObjectIDValue], ["$set":
+		m_users.updateOne(["_id": user.bsonObjectIDValue], ["$set":
 			["auth.method": "password", "auth.passwordHash": generatePasswordHash(password)]]);
 	}
 
 	override void setProperty(User.ID user, string name, Json value)
 	{
-		m_users.update(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
+		m_users.updateOne(["_id": user.bsonObjectIDValue], ["$set": ["properties."~name: value]]);
 	}
 
 	override void removeProperty(User.ID user, string name)
 	{
-		m_users.update(["_id": user.bsonObjectIDValue], ["$unset": ["properties."~name: ""]]);
+		m_users.updateOne(["_id": user.bsonObjectIDValue], ["$unset": ["properties."~name: ""]]);
 	}
 
 	override void addGroup(string id, string description)
@@ -175,23 +179,23 @@ class MongoUserManController : UserManController {
 		auto grp = new Group;
 		grp.id = id;
 		grp.description = description;
-		m_groups.insert(grp);
+		m_groups.insertOne(grp);
 	}
 
 	override void removeGroup(string id)
 	{
-		m_groups.remove(["id": id]);
+		m_groups.deleteOne(["id": id]);
 	}
 
 	override void setGroupDescription(string name, string description)
 	{
-		m_groups.update(["id": name], ["$set": ["description": description]]);
+		m_groups.updateOne(["id": name], ["$set": ["description": description]]);
 	}
 
 	override long getGroupCount()
 	{
 		import vibe.data.bson : Bson;
-		return m_groups.count(Bson.emptyObject);
+		return m_groups.countDocuments(Bson.emptyObject);
 	}
 
 	override Group getGroup(string name)
@@ -205,7 +209,11 @@ class MongoUserManController : UserManController {
 	override void enumerateGroups(long first_group, long max_count, scope void delegate(ref Group grp) @safe del)
 	{
 		import std.conv : to;
-		foreach (grp; m_groups.find!Group(["query": null, "orderby": ["id": 1]], null, QueryFlags.None, first_group.to!int, max_count.to!int)) {
+		FindOptions opts;
+		opts.skip = first_group;
+		opts.limit = max_count;
+		opts.sort = Bson(["id": Bson(1)]);
+		foreach (grp; m_groups.find!Group(Bson.emptyObject, opts)) {
 			if (max_count-- <= 0) break;
 			del(grp);
 		}
