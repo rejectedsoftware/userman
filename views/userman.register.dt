@@ -35,4 +35,7 @@ block userman.content
 					label(for="passwordConfirmation") Password confirmation:
 				td
 					input(type="password", name="passwordConfirmation")
+		input#fc(type="hidden", name="check", value="3fb")
 		button(type="submit") Register account
+
+	script var fc=document.getElementById("fc");fc.setAttribute("value","a"+fc.getAttribute("value")+"#{postEpoch}");

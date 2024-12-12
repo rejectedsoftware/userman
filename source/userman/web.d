@@ -262,13 +262,24 @@ class UserManWebInterface {
 		SessionVar!(string, "userFullName") m_sessUserFullName;
 		SessionVar!(string, "userID") m_sessUserID;
 		UserManAPISettings m_settings;
+		size_t m_postEpoch;
 	}
 
 	this(UserManAPI api, string prefix = "/")
 	{
+		import core.time : hours;
+		import std.random : unpredictableSeed;
+		import vibe.core.core : setTimer;
+
 		m_api = api;
 		m_settings = api.settings;
 		m_prefix = prefix;
+
+		// Invalidates pending forms every 2 to 4 hours, just making sure it
+		// always starts with a random number, no need to be cryptographically
+		// secure, this is just to make it a little more difficult for spammers
+		m_postEpoch = unpredictableSeed();
+		setTimer(2.hours, { m_postEpoch++; }, true);
 	}
 
 	deprecated this(UserManController controller, string prefix = "/")
@@ -319,12 +330,15 @@ class UserManWebInterface {
 	{
 		string error = _error;
 		auto settings = m_settings;
-		render!("userman.register.dt", error, settings);
+		auto postEpoch = m_postEpoch;
+		render!("userman.register.dt", error, settings, postEpoch);
 	}
 
 	@noAuth @errorDisplay!getRegister
-	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation)
+	void postRegister(ValidEmail email, Nullable!string name, string fullName, ValidPassword password, Confirm!"password" passwordConfirmation, string check)
 	{
+		import std.conv : to;
+
 		string username;
 		if (m_settings.useUserNames) {
 			enforce(!name.isNull, "Missing user name field.");
@@ -334,6 +348,9 @@ class UserManWebInterface {
 
 			username = name.get;
 		} else username = email;
+
+		if (check != "a3fb"~m_postEpoch.to!string && check != "a3fb"~(m_postEpoch-1).to!string)
+			throw new Exception("Form expired");
 
 		m_api.users.register(email, username, fullName, password);
 
