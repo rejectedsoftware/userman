@@ -17,7 +17,7 @@ import vibe.utils.validation;
 import vibe.web.auth;
 import vibe.web.web;
 
-import std.algorithm : min, max;
+import std.algorithm : max, min;
 import std.array : appender;
 import std.conv : to;
 import std.exception;
@@ -63,21 +63,21 @@ class UserManWebAdminInterface {
 	{
 		import std.algorithm.searching : canFind;
 
-		User.ID uid;
-		try uid = m_api.users.testLogin(name, password);
+		UserLoginInfo info;
+		try info = m_api.users.testLoginInfo(name, password);
 		catch (Exception e) {
 			import std.encoding : sanitize;
 			logDebug("Error logging in: %s", e.toString().sanitize);
 			throw new Exception("Invalid user/email or password.");
 		}
 
-		auto user = m_api.users[uid].get();
+		auto user = m_api.users[info.userId].get();
 		enforce(user.active, "The account is not yet activated.");
-		enforce(m_api.users[uid].getGroups().canFind(adminGroupName), "User is not an administrator.");
+		enforce(m_api.users[info.userId].getGroups().canFind(adminGroupName), "User is not an administrator.");
 
 		m_authUser = user.id;
 		m_authUserDisplayName = user.fullName;
-		.redirect(redirect);
+		.redirect(info.needsPasswordChange ? "/profile?changepw=true" : redirect);
 	}
 
 	@noAuth @errorDisplay!getLogin
@@ -393,9 +393,9 @@ struct ValidGroupName {
 
 	static Nullable!ValidGroupName fromStringValidate(string str, string* err)
 	{
-		import vibe.utils.validation : validateIdent;
 		import std.algorithm : splitter;
 		import std.array : appender;
+		import vibe.utils.validation : validateIdent;
 
 		// work around disabled default construction
 		auto ret = Nullable!ValidGroupName(ValidGroupName(null));

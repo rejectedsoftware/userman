@@ -4,29 +4,33 @@ block title
 	- title = "Edit profile";
 	
 block userman.content
-	h2 Personal information
+	- if (!changepw)
+		h2 Personal information
 
-	form(action="profile", method="POST")
-		table
-			col.caption
-			- if (useUserNames)
+		form(action="profile", method="POST")
+			table
+				col.caption
+				- if (useUserNames)
+					tr
+						td User name
+						td= user.name
 				tr
-					td User name
-					td= user.name
-			tr
-				td Display name
-				td
-					input(type="text", name="full_name", value=req.form["full_name"])
-			tr
-				td E-mail address
-				td
-					input(type="email", name="email", value=req.form["email"])
-			tr
-				td
-				td
-					button(type="submit") Apply
+					td Display name
+					td
+						input(type="text", name="full_name", value=req.form["full_name"])
+				tr
+					td E-mail address
+					td
+						input(type="email", name="email", value=req.form["email"])
+				tr
+					td
+					td
+						button(type="submit") Apply
 
 	h2 Change password
+
+	- if (changepw)
+		p.error Your password was insecurely saved on our servers - please set a new password to ensure your account's safety.
 
 	form(action="profile", method="POST")
 		table

@@ -14,10 +14,10 @@ import vibe.data.json;
 import vibe.textfilter.urlencode;
 import vibe.utils.validation;
 
+import std.conv;
 import std.datetime;
 import std.exception;
 import std.string;
-import std.conv;
 import std.uuid;
 
 
@@ -181,7 +181,7 @@ class FileUserManController : UserManController {
 	{
 		auto usr = getUser(user);
 		usr.auth.method = "password";
-		usr.auth.passwordHash = generatePasswordHash(password);
+		usr.auth.passwordHash = generateBcryptHash(password);
 		updateUser(usr);
 	}
 
