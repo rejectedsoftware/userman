@@ -2,7 +2,7 @@
 /testdb
 /*.dll
 /*.exe
-userman
+/userman
 userman.exe
 userman-test-*
 libuserman.a
