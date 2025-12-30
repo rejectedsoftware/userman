@@ -10,13 +10,13 @@ module userman.db.controller;
 public import userman.userman;
 import userman.id;
 
+import diet.html;
 import vibe.data.serialization;
 import vibe.db.mongo.mongo;
 import vibe.http.router;
 import vibe.mail.smtp;
 import vibe.stream.memory;
 import vibe.utils.validation;
-import diet.html;
 
 import std.algorithm;
 import std.array;
@@ -77,8 +77,8 @@ class UserManController {
 		user.name = name;
 		user.fullName = full_name;
 		user.auth.method = "password";
-		user.auth.passwordHash = generatePasswordHash(password);
-		assert(validatePasswordHash(user.auth.passwordHash, password));
+		user.auth.passwordHash = generateBcryptHash(password);
+		assert(validateBcryptHash(user.auth.passwordHash, password));
 		user.email = email;
 		if( need_activation )
 			user.activationCode = generateActivationCode();
@@ -127,15 +127,41 @@ class UserManController {
 		}
 	}
 
-	Nullable!(User.ID) testLogin(string name, string password)
+	static struct LoginResult
 	{
-		string password_ = password;
-		auto user = getUserByEmailOrName(name);
-		assert(password == password_); // this used to be false to to a Nullable related codegen issue
-		Nullable!(User.ID) ret;
-		if (validatePasswordHash(user.auth.passwordHash, password_))
-			ret = user.id;
+		/// If set, the username and password combination was found in the DB.
+		Nullable!(User.ID) userId;
+		/// Set to true if the current password is deemed too insecure now.
+		/// In that case, a password reset should be mandatory.
+		bool needsPasswordChange;
+	}
+
+	/// Checks if the login credentials are correct, returns one of:
+	/// - invalid username or password (result is LoginResult.init)
+	/// - valid user, but password reset is required (userId is set, needsPasswordChange is true)
+	/// - valid: valid user (userId is set, needsPasswordChange is false)
+	LoginResult validateLogin(string emailOrName, string password)
+	{
+		auto user = getUserByEmailOrName(emailOrName);
+		LoginResult ret;
+		bool validPassword;
+		if (user.auth.passwordHash.length && user.auth.passwordHash[0] == '$') {
+			validPassword = validateBcryptHash(user.auth.passwordHash, password);
+		} else {
+			validPassword = validatePasswordHashMD5(user.auth.passwordHash, password);
+			ret.needsPasswordChange = true;
+		}
+
+		if (!validPassword)
+			return LoginResult.init;
+
+		ret.userId = user.id;
 		return ret;
+	}
+
+	deprecated("Use validateLogin instead") Nullable!(User.ID) testLogin(string name, string password)
+	{
+		return validateLogin(name, password).userId;
 	}
 
 	void activateUser(string email, string activation_code)
@@ -208,7 +234,7 @@ class UserManController {
 		usr.resetCode = "";
 		updateUser(usr);
 		enforce(reset_code == code, "Invalid request code, please request a new one.");
-		usr.auth.passwordHash = generatePasswordHash(new_password);
+		usr.auth.passwordHash = generateBcryptHash(new_password);
 		updateUser(usr);
 	}
 
@@ -263,8 +289,8 @@ class UserManController {
 	*/
 	static bool isValidGroupID(string name)
 	{
-		import std.ascii : isAlpha, isDigit;
 		import std.algorithm : splitter;
+		import std.ascii : isAlpha, isDigit;
 
 		if (name.length < 1) return false;
 		foreach (p; name.splitter('.')) {
@@ -322,7 +348,29 @@ string generateActivationCode()
 	return ret.data();
 }
 
-string generatePasswordHash(string password)
+string generateBcryptHash(in string password, ushort work_factor = 12)
+@trusted {
+	import botan.passhash.bcrypt : generateBcrypt;
+	import botan.rng.auto_rng;
+
+	static AutoSeededRNG rng;
+	if (rng is null)
+		rng = new AutoSeededRNG;
+
+	return generateBcrypt(password, rng, work_factor);
+}
+
+bool validateBcryptHash(in string password_hash, in string password)
+@trusted {
+	import botan.passhash.bcrypt : checkBcrypt;
+
+	return checkBcrypt(password, password_hash);
+}
+
+deprecated("Use generatePasswordHashMD5 for old (insecure) behavior or generateBcryptHash") alias generatePasswordHash = generatePasswordHashMD5;
+deprecated("Use validatePasswordHashMD5 for old (insecure) behavior or validateBcryptHash") alias validatePasswordHash = validatePasswordHashMD5;
+
+deprecated("This method is insecure") string generatePasswordHashMD5(string password)
 @safe {
 	import std.base64 : Base64;
 
@@ -333,7 +381,7 @@ string generatePasswordHash(string password)
 	return Base64.encode(salt ~ hash).idup;
 }
 
-bool validatePasswordHash(string password_hash, string password)
+bool validatePasswordHashMD5(string password_hash, string password)
 @safe {
 	import std.base64 : Base64;
 
@@ -347,10 +395,16 @@ bool validatePasswordHash(string password_hash, string password)
 	return hash == hashcmp;
 }
 
+deprecated unittest {
+	auto h = generatePasswordHashMD5("foobar");
+	assert(!validatePasswordHashMD5(h, "foo"));
+	assert(validatePasswordHashMD5(h, "foobar"));
+}
+
 unittest {
-	auto h = generatePasswordHash("foobar");
-	assert(!validatePasswordHash(h, "foo"));
-	assert(validatePasswordHash(h, "foobar"));
+	auto h = generateBcryptHash("foobar");
+	assert(!validateBcryptHash(h, "foo"));
+	assert(validateBcryptHash(h, "foobar"));
 }
 
 private ubyte[16] md5hash(scope const(ubyte)[] salt, const string[] strs...)

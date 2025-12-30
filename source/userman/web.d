@@ -298,10 +298,15 @@ class UserManWebInterface {
 	@noAuth @errorDisplay!getLogin
 	void postLogin(string name, string password, string redirect = "")
 	{
+		import std.string : chomp;
+
 		User user;
+		string redirectUrl = redirect.length ? redirect : m_prefix;
 		try {
-			auto uid = m_api.users.testLogin(name, password);
-			user = m_api.users[uid].get();
+			auto result = m_api.users.testLoginInfo(name, password);
+			if (result.needsPasswordChange)
+				redirectUrl = m_prefix.chomp("/") ~ "/profile?changepw=true";
+			user = m_api.users[result.userId].get();
 		} catch (Exception e) {
 			import std.encoding : sanitize;
 			logDebug("Error logging in: %s", e.toString().sanitize);
@@ -314,7 +319,7 @@ class UserManWebInterface {
 		m_sessUserName = user.name;
 		m_sessUserFullName = user.fullName;
 		m_sessUserID = user.id.toString();
-		.redirect(redirect.length ? redirect : m_prefix);
+		.redirect(redirectUrl);
 	}
 
 	@noAuth
@@ -430,14 +435,14 @@ class UserManWebInterface {
 	}
 
 	@anyAuth
-	void getProfile(HTTPServerRequest req, User _user, string _error = "")
+	void getProfile(HTTPServerRequest req, User _user, string _error = "", bool changepw = false)
 	{
 		req.form["full_name"] = _user.fullName;
 		req.form["email"] = _user.email;
 		bool useUserNames = m_settings.useUserNames;
 		auto user = _user;
 		string error = _error;
-		render!("userman.profile.dt", user, useUserNames, error);
+		render!("userman.profile.dt", user, useUserNames, error, changepw);
 	}
 
 	@anyAuth @errorDisplay!getProfile

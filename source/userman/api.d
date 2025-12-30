@@ -7,12 +7,12 @@
 */
 module userman.api;
 
-import userman.db.controller : UserManController, UserManCommonSettings;
+import userman.db.controller : UserManCommonSettings, UserManController;
 static import userman.db.controller;
 
 import vibe.data.json : Json;
-import vibe.http.router : URLRouter;
 import vibe.http.common : enforceHTTP;
+import vibe.http.router : URLRouter;
 import vibe.http.status : HTTPStatus;
 import vibe.inet.url : URL;
 import vibe.web.rest;
@@ -72,6 +72,9 @@ interface UserManUserAPI {
 	@property Collection!UserManUserPropertyAPI properties(User.ID _user);
 
 	/// Tests a username/e-mail and password combination for validity.
+	UserLoginInfo testLoginInfo(string email_or_name, string password);
+
+	/// Deprecated: you should use testLoginInfo instead!
 	User.ID testLogin(string name, string password);
 
 	/// Registers a new user.
@@ -163,6 +166,15 @@ struct User {
 		this.fullName = usr.fullName;
 		this.email = usr.email;
 	}
+}
+
+/// Information about a user coming from a login attempt.
+struct UserLoginInfo {
+	/// User ID of the login credentials
+	User.ID userId;
+	/// Set to true if the current password is deemed too insecure now.
+	/// In that case, a password reset should be mandatory.
+	bool needsPasswordChange;
 }
 
 /// Interface suitable for manipulating group information
@@ -277,11 +289,18 @@ private class UserManUserAPIImpl : UserManUserAPI {
 		return Collection!UserManUserPropertyAPI(m_properties, _id);
 	}
 
+	UserLoginInfo testLoginInfo(string email_or_name, string password)
+	{
+		auto ret = m_ctrl.validateLogin(email_or_name, password);
+		enforceHTTP(!ret.userId.isNull, HTTPStatus.unauthorized, "Wrong user name or password.");
+		return UserLoginInfo(ret.userId.get(), ret.needsPasswordChange);
+	}
+
 	User.ID testLogin(string name, string password)
 	{
-		auto ret = m_ctrl.testLogin(name, password);
-		enforceHTTP(!ret.isNull, HTTPStatus.unauthorized, "Wrong user name or password.");
-		return ret.get();
+		auto ret = m_ctrl.validateLogin(name, password);
+		enforceHTTP(!ret.userId.isNull, HTTPStatus.unauthorized, "Wrong user name or password.");
+		return ret.userId.get();
 	}
 
 	User.ID register(string email, string name, string full_name, string password)

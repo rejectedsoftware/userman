@@ -9,18 +9,18 @@ module userman.db.redis;
 
 import userman.db.controller;
 
-import vibe.db.redis.redis;
-import vibe.db.redis.idioms;
-import vibe.db.redis.types;
 import vibe.data.bson;
 import vibe.data.json;
+import vibe.db.redis.idioms;
+import vibe.db.redis.redis;
+import vibe.db.redis.types;
 import vibe.utils.validation;
 
+import std.conv;
 import std.datetime;
 import std.exception;
-import std.string;
-import std.conv;
 import std.range : front;
+import std.string;
 
 
 class RedisUserManController : UserManController {
@@ -287,7 +287,7 @@ class RedisUserManController : UserManController {
 
 		AuthInfo auth = m_userAuthInfo[user.longValue];
 		auth.method = "password";
-		auth.passwordHash = generatePasswordHash(password);
+		auth.passwordHash = generateBcryptHash(password);
 		m_userAuthInfo[user.longValue] = auth;
 	}
 
